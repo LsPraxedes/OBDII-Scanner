@@ -39,12 +39,12 @@ gitGraph
     checkout v0
     merge fix/v0-heap-leak
     commit id: "v0.1.1" tag: "v0.1.1"
-    branch feat/update fonts
-    checkout feat/update fonts
-    commit id: "feat: update fonts"
+    branch fe/update fonts
+    checkout fe/update fonts
+    commit id: "fe: update fonts"
     checkout main
-    merge feat/update fonts
-    commit id: "feat: update fonts"
+    merge fe/update fonts
+    commit id: "fe: update fonts"
 ```
 
 ## Convenções
