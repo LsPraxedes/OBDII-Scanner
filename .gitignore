@@ -50,3 +50,15 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Segredos / ambiente
+.env
+
+# --- Python (scripts de análise) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+.gemini/
+.agent/
