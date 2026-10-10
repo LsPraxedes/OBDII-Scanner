@@ -2,8 +2,11 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+import sys
+import os
 
-API_URL = "http://localhost:8000/api/v1/telemetry"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from backend.config import API_URL
 
 st.set_page_config(
     page_title="Central de Análise Veicular Preditiva",

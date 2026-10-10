@@ -43,12 +43,12 @@ O projeto utiliza uma abordagem Top-Down e uma arquitetura desacoplada (Hardware
 
 O projeto está dividido em etapas de validação para mitigar riscos técnicos:
 
-- **Fase 1 (Alpha 1):** Esteira de Dados (Setup FastAPI, Banco, MQTT e Dashboard Streamlit com dados mockados).
-- **Fase 2 (Alpha 2):** Comunicação de Baixo Nível (Programação do barramento TWAI do ESP32 via ESP-IDF para leitura CAN E2E).
-- **Fase 3 (Alpha 3):** Análise Preditiva (Tratamento de dados com Pandas e modelagem de Machine Learning com Scikit-Learn).
-- **Fase 4: (Alpha 4)** Implantação e Integração (Plugar a IA no FastAPI para gerar alertas em tempo real no dashboard).
-- **Fase 5: (Beta 1)** Validação final com testes em campo e formatação para entrega do TCC.
-- **Fase 6: (Beta 2)** Testes por terceiros e desenvolvimento de mais funcionalidades e protocolos OBD2.
+- **Alpha 1:** Esteira de Dados (Setup FastAPI, Banco, MQTT e Dashboard Streamlit com dados mockados).
+- **Alpha 2:** Comunicação de Baixo Nível (Programação do barramento TWAI do ESP32 via ESP-IDF para leitura CAN E2E).
+- **Alpha 3:** Análise Preditiva (Tratamento de dados com Pandas e modelagem de Machine Learning com Scikit-Learn).
+- **Alpha 4** Implantação e Integração (Plugar a IA no FastAPI para gerar alertas em tempo real no dashboard).
+- **Beta 1** Validação final com testes em campo e formatação para entrega do TCC.
+- **Beta 2** Testes por terceiros e desenvolvimento de mais funcionalidades e protocolos OBD2.
 - ... (Fases posteriores serão definidas)
 
 ---

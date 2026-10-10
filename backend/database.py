@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine, Column, Integer, Float, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime, timezone
+from backend.config import DATABASE_URL
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./vehicle_data.db"
+SQLALCHEMY_DATABASE_URL = DATABASE_URL
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

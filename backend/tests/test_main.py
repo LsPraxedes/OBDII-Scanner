@@ -2,11 +2,14 @@
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from unittest.mock import MagicMock
+import backend.main
 
 from backend.main import app
 from backend.database import Base, get_db
+from backend.config import TEST_DATABASE_URL
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = TEST_DATABASE_URL
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
@@ -22,6 +25,10 @@ def override_get_db():
         db.close()
 
 app.dependency_overrides[get_db] = override_get_db
+
+# Mocking the MQTT client for tests
+mock_mqtt_client = MagicMock()
+backend.main.get_mqtt_client = lambda: mock_mqtt_client
 
 client = TestClient(app)
 

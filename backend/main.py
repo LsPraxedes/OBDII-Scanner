@@ -5,6 +5,9 @@ import logging
 
 from backend import database
 from backend.schemas.telemetry import TelemetryCreate, TelemetryResponse
+from backend.mqtt_client import get_mqtt_client
+from backend.config import MQTT_BROKER, MQTT_PORT
+from contextlib import asynccontextmanager
 
 # Configuração de log
 logging.basicConfig(level=logging.INFO)
@@ -13,10 +16,29 @@ logger = logging.getLogger(__name__)
 # Criar as tabelas no banco de dados SQLite
 database.Base.metadata.create_all(bind=database.engine)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize MQTT Client
+    client = get_mqtt_client()
+    try:
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        client.loop_start()
+        logger.info("MQTT Client loop started in background.")
+    except Exception as e:
+        logger.error(f"Could not connect to MQTT Broker at startup: {e}")
+    
+    yield
+    
+    # Shutdown: Stop MQTT Client
+    client.loop_stop()
+    client.disconnect()
+    logger.info("MQTT Client disconnected.")
+
 app = FastAPI(
     title="Central de Análise Veicular Preditiva",
     description="API for validating and storing OBD-II telemetry data",
-    version="0.0.1"
+    version="0.0.1",
+    lifespan=lifespan
 )
 
 @app.post("/api/v1/telemetry", response_model=TelemetryResponse)
