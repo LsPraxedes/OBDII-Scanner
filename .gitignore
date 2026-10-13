@@ -7,6 +7,7 @@
 *.obj
 *.elf
 
+
 # Linker output
 *.ilk
 *.map
@@ -55,6 +56,8 @@ dkms.conf
 .env
 
 # --- Python (scripts de análise) ---
+.pytest_cache/
+.ruff_cache/
 __pycache__/
 *.pyc
 .venv/
@@ -62,3 +65,10 @@ venv/
 
 .gemini/
 .agent/
+.cache/
+.vscode/
+
+# ESP-IDF Build & Binaries
+build/
+**/build/
+sdkconfig.old
