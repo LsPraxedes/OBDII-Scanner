@@ -2,7 +2,6 @@
 import json
 from unittest.mock import MagicMock, patch
 from backend.mqtt_client import on_message
-from backend.schemas.telemetry import TelemetryCreate
 
 @patch('backend.mqtt_client.SessionLocal')
 def test_on_message_valid_payload(mock_session_local):
