@@ -1,0 +1,399 @@
+\documentclass[a4paper, 12pt]{article}
+
+% Modelo baseados nos diponibilizados por Lazaro Silva (https://www.overleaf.com/latex/templates/modelo-de-relatorio/dnxhwsjdmpyb)
+
+\usepackage[portuges]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{multicol,lipsum}
+\usepackage{multirow}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{url}
+\usepackage{hyperref} % Para links clicáveis
+\usepackage{geometry}
+\geometry{a4paper, margin=3cm}
+\usepackage[acronym]{glossaries}
+
+\makeglossaries
+\input{siglas} % Supondo que 'siglas.tex' contém suas definições \newacronym
+
+\begin{document}
+
+% --- Página de Título ---
+% Por padrão, a titlepage não tem número de página visível.
+% Adicionamos explicitamente \thispagestyle{empty} para garantir.
+\begin{titlepage}
+	\setcounter{page}{0}
+	\begin{center}
+		\normalsize{Universidade Federal de São Paulo}\\
+		\normalsize{Instituto de Ciência e Tecnologia}\\
+		\normalsize{Trabalho de Conclusão de Curso I}\\
+		\vspace{15pt}
+		\vspace{95pt}
+		\textbf{Desenvolvimento de uma Central de Análise Veicular com Leitor de Protocolo OBD-II}\\
+		\vspace{3,5cm}
+	\end{center}
+	
+	\begin{flushleft}
+		\begin{tabbing}
+			\textbf{Orientando:} Lucas Praxedes Fischer de Mattos \\
+			\textbf{Orientador:} Profº. Drº. Lauro Paulo de Filho Neto\\
+		\end{tabbing}
+	\end{flushleft}
+	\vspace{1cm}
+	
+	\begin{center}
+		\vspace{\fill}
+		São José dos Campos\\
+		2026/1
+	\end{center}
+\end{titlepage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% --- Páginas Pré-textuais sem Numeração Visível ---
+\clearpage % Inicia nova página após a capa
+% Define o estilo de página para "empty" (sem cabeçalho/rodapé, ou seja, sem número)
+% \pagestyle{empty} fará com que todas as páginas futuras sejam "empty"
+% até que outro \pagestyle seja definido.
+\pagestyle{empty} 
+\setcounter{page}{0}
+\begin{abstract}
+
+A crescente demanda por veículos conectados evidencia a importância da coleta e análise de dados automotivos, contudo, o acesso a essas informações é frequentemente restrito e as soluções comerciais existentes carecem de flexibilidade. Este trabalho propõe o desenvolvimento de uma central de análise veicular de baixo custo, que se diferencia ao integrar um leitor de protocolo OBD-II customizado, uma arquitetura de dados em nuvem e um módulo de análise preditiva. A metodologia abrange o projeto de um \textit{hardware} próprio com um microcontrolador ESP32 para a aquisição de dados diretamente da ECU. A comunicação com o veículo é estabelecida através da implementação em baixo nível do protocolo de diagnóstico, e os dados coletados são processados, transmitidos via \textit{Wi-Fi} e armazenados em um banco de dados online. Por fim, o histórico de dados é utilizado para treinar modelos de IA com foco na detecção de anomalias e no diagnóstico proativo. O principal diferencial reside na criação de uma arquitetura integrada, própria e escalável de baixo custo, que elimina a dependência de dispositivos intermediários e transforma dados brutos em conhecimento preditivo, representando um avanço em relação às soluções de monitoramento descritivas ou reativas encontradas na literatura.
+
+\vspace{\baselineskip}
+\noindent
+\textbf{Palavras-chave:} Monitoramento Veicular, OBD-II, Internet das Coisas, Sistemas Embarcados, Inteligência Artificial.
+\end{abstract}
+
+\clearpage
+
+% Imprime a lista de acrônimos (ela estará em uma página sem número visível)
+\printglossary[type=\acronymtype, title={Lista de Siglas e Abreviaturas}]
+\setcounter{page}{0}
+\clearpage
+
+%\listoffigures Lista de figuras (sem número visível)
+%\setcounter{page}{0}
+%\clearpage
+
+\tableofcontents % Sumário (sem número visível)
+\setcounter{page}{0}
+\clearpage
+
+% --- Início do Conteúdo Principal com Numeração Arábica (1, 2, 3...) ---
+
+% Define o estilo de página padrão (que geralmente inclui o número da página no rodapé)
+\pagestyle{plain} 
+
+% Reinicia o contador de páginas do LaTeX para 1
+\setcounter{page}{1}
+% Define a numeração visível como arábica a partir daqui
+\pagenumbering{arabic}
+
+% Reinicia o rastreamento de páginas do glossaries para que a próxima \gls grave o número de página *correto*
+\glsresetall
+\section{Introdução}
+
+A indústria automotiva tem passado por uma profunda transformação, devido à crescente demanda por veículos mais inteligentes, conectados e eficientes (LLOPIS-ALBERT, 2021). Nesse cenário, a capacidade de coletar, analisar e transmitir dados veiculares em tempo real tornou-se um pilar fundamental para a inovação. A vasta gama de informações geradas pelos sistemas embarcados em automóveis modernos abre portas para diversas aplicações, desde o monitoramento da saúde do veículo e a otimização da dirigibilidade até o desenvolvimento de sistemas inteligentes de assistência ao motorista e análise de comportamento de direção (ANDRIA et al., 2016).
+
+Na comunicação interna dos veículos modernos está a rede \acrshort{can} (do inglês, \textit{Controller Area Network}), um protocolo de barramento serial que se destaca por sua robustez, confiabilidade e baixo custo (BOSCH, 2012). Embora essa tecnologia seja onipresente, o acesso direto aos dados que trafegam por essa rede ainda é limitado para o usuário final, especialmente em veículos populares, que geralmente carecem de computadores de bordo avançados. Essa lacuna de informação impede que os motoristas tenham uma visão completa sobre as condições e o desempenho de seus próprios veículos.
+
+A tentativa de modificar os sistemas embarcados originais para obter esses dados é, na maioria das vezes, inviável devido à complexidade técnica e à perda da garantia do veículo. Uma alternativa eficaz e não invasiva é a utilização de dispositivos \textit{sniffers}, que se conectam à porta de diagnóstico veicular e capturam os dados da rede \acrshort{can} sem alterar o sistema original do carro  (ELECTRONICS, 2024). Tais dispositivos são ferramentas poderosas para a telemetria, permitindo o diagnóstico preventivo e a análise remota do desempenho veicular.
+
+A integração desses sistemas de aquisição de dados com tecnologias da Internet das Coisas (do inglês, \textit{Internet of Things} - \acrshort{iot}) representa um avanço significativo, possibilitando que as informações coletadas sejam transmitidas e disponibilizadas em plataformas na nuvem (IQBAL et al., 2019). Essa conectividade abre um leque de possibilidades, permitindo que fabricantes aprimorem seus projetos, seguradoras personalizem apólices com base no comportamento do motorista e desenvolvedores criem novas aplicações que aumentem a segurança e a conveniência para o usuário final.
+
+\subsection{Objetivo Geral}
+
+O presente trabalho tem como objetivo geral o desenvolvimento de um sistema computacional auxiliar ao veículo, de baixo custo e fácil utilização. Este sistema será projetado para realizar a leitura e interpretação de informações úteis da rede \acrshort{can}, como um pequeno computador de bordo, e realizar a subsequente transmissão desses dados para um banco de dados pela internet, a fim de disponibilizar ao motorista diversas informações sobre o veículo, como temperatura de óleo, água do arrefecimento, pressão de óleo, quantidade de emissão de CO², entre outras.
+
+\subsection{Objetivos Específicos}
+
+Para alcançar o objetivo proposto, os seguintes objetivos específicos serão desenvolvidos:
+
+\begin{itemize}
+
+\item Projetar e construir o hardware de microcontrolador necessário para a coleta de dados da rede \acrshort{can} veicular.
+
+\item Investigar a melhor alternativa para ler o barramento \acrshort{can} através do conector \acrshort{obd} (do inglês, \textit{On-Board Diagnostics version II}).
+
+\item Criar uma aplicação \textit{web} de fácil uso para a visualização dos dados em tempo real pelo usuário.
+
+\item Desenvolver um sistema de inteligência artificial (\acrshort{ia}) capaz de analisar corretamente um banco de dados e prever comportamentos anormais.
+
+\item Fabricação de uma estrutura própria de encapsulamento para o protótipo.
+
+\item Aplicar o sistema desenvolvido num veículo real e validá-lo.
+
+\end{itemize}
+
+\clearpage
+
+\section{Fundamentação Teórica}
+
+Para o desenvolvimento deste trabalho, foram estudados os sistemas embarcados dos veículos, eletrônica veicular e seu sistema de diagnóstico \acrshort{obd}, além de sua rede de comunicação e protocolos, onde estes serão apresentados nesta seção. Além disso, a revisão visa avaliar diferentes microcontroladores, considerando suas capacidades de comunicação sem fio, incorporação com a \acrshort{iot}, e sua compatibilidade com os requisitos do projeto.
+
+\subsection{Unidade de Controle Eletrônica}
+
+Uma Unidade de Controle Eletrônico (\acrshort{uce}) automotiva, do inglês \textit{Eletronic Control Unit} (\acrshort{ecu}), é um microcontrolador com um programa gravado em sua memória para desempenhar as respectivas funções projetadas (GUIMARÃES, 2007).
+
+Nesse sentido, uma \acrshort{ecu} é análoga a um computador. Internamente, possui uma placa de circuito impresso com um microprocessador ou microcontrolador, que atua como o cérebro do dispositivo, sendo responsável pela execução de programas e pelo gerenciamento de atividades. Em sua memória, fica gravado o programa de diagnóstico e controle, conhecido como software embarcado ou \textit{firmware}.
+
+As montadoras, com o objetivo de conter a poluição e melhorar o desempenho dos motores, tiveram como foco o desenvolvimento do sistema eletrônico do carro. Principalmente da \acrshort{ecu}, pois era necessário o controle eletrônico preciso dos motores em desenvolvimento. Esse sistema de gerenciamento atua no controle da injeção de combustível, controle da mistura, controle da ignição, diagnóstico de erros, e muitas outras funções ``invisíveis" ao olho humano. A \acrshort{ecu} possui diversos conectores para sensores e atuadores que realizam o envio de informações sobre os mecanismos do veículo para essa central (CAPELLI, 2010).
+
+\subsection{A Rede de Comunicação Veicular: CAN Bus}
+
+O protocolo \acrshort{can} foi desenvolvido na década de 1980 pela Robert Bosch e se consolidou como um padrão internacional (ISO 11898) para a comunicação entre as diversas \acrshort{ecu}s presentes em um veículo. Sua adoção em larga escala pela indústria automotiva se deve à sua implementação de baixo custo, alta confiabilidade e robustez a interferências eletromagnéticas, características essenciais para o ambiente automotivo. A topologia do \acrshort{can} \textit{Bus} é do tipo barramento, onde múltiplos nós ( múltiplas \acrshort{ecu}s) se conectam a um par de fios trançados, reduzindo significativamente a complexidade e o peso dos chicotes elétricos em comparação com sistemas de fiação ponto a ponto (ELETRONICS, 2023).
+
+A comunicação na rede \acrshort{can} é baseada em uma lógica diferencial utilizando duas linhas: \acrshort{can} \textit{High} (CAN\_H) e \acrshort{can} \textit{Low} (CAN\_L). Os dados são representados por dois estados: dominante (bit '0') e recessivo (bit '1'). No estado recessivo, as tensões em ambas as linhas são aproximadamente iguais (em torno de 2,5V), enquanto no estado dominante, a tensão em CAN\_H sobe para cerca de 3,5V e em CAN\_L cai para aproximadamente 1,5V (ELETRONICS, 2023). Essa transmissão diferencial confere ao protocolo uma alta imunidade a ruídos, uma vez que interferências eletromagnéticas tendem a afetar ambas as linhas de forma similar, mantendo a diferença de tensão e, consequentemente, a integridade do sinal.
+
+O sequenciamento das mensagens binárias forma os hexadecimais que são a composição das mensagens das \acrshort{ecu}s no protocolo \acrshort{can}. Estas mensagens são denominadas de \acrshort{can} \textit{frames} (ELETRONICS, 2023).
+\textit{}
+\subsection{Diagnóstico de Bordo: O Padrão OBD-II}
+
+O sistema de Diagnóstico de Bordo (do inglês, \textit{On-Board Diagnostics}) surgiu como uma necessidade de monitorar e reportar o estado dos diversos componentes de um veículo, especialmente aqueles relacionados ao controle de emissões de poluentes. A padronização evoluiu para a segunda geração, o \acrshort{obd}, que se tornou obrigatório nos Estados Unidos a partir de 1996 e, posteriormente, adotado mundialmente, inclusive no Brasil.(GUIMARÃES, 2007).
+
+O padrão \acrshort{obd} especifica um conector físico de 16 pinos (SAE J1962), geralmente localizado ao alcance do motorista, que serve como uma interface de diagnóstico universal. Através deste conector, é possível acessar informações cruciais do veículo, como velocidade, rotação do motor (\acrshort{rpm}), temperatura do líquido de arrefecimento e códigos de falha de diagnóstico (\acrshort{dtc}, do inglês Diagnostic Trouble Code).
+
+Segundo Guimarães (2007), o diagnóstico do sistema ocorre a partir dos \acrshort{dtc}, que são códigos pré-programados pelo fabricante e registrados na memória dos módulos eletrônicos; com isso, é possível a identificação do que não está funcionando corretamente.
+
+Existem cinco principais protocolos de comunicação que podem ser utilizados na interface \acrshort{obd}, sendo o \acrshort{can} (ISO 15765) o mais comum em veículos fabricados a partir de 2008. A identificação do protocolo utilizado em um veículo específico pode ser feita pela análise dos pinos presentes no conector \acrshort{obd}, pois as montadoras colocam apenas os pinos necessários daquele protocolo específico a fim de economizar material. Assim, cada protocolo utiliza um conjunto definido dos 16 pinos da interface: o protocolo ISO 9141-2, por exemplo, utiliza apenas os pinos 4 e 7 para informação.
+
+\subsection{Aquisição de Dados via OBD-II}
+
+Para interagir com a ECU do veículo e solicitar dados específicos, são utilizados os Identificadores de Parâmetros, do inglês, \textit{parameters identification},(\acrshort{pid}s), que são códigos padronizados pela norma SAE J1979. Cada \acrshort{pid} corresponde a uma informação específica, como ``Velocidade do Veículo" (PID 0D) ou ``Rotação do Motor" (PID 0C) (ELETRONICS, 2023).
+
+A solicitação de um \acrshort{pid} é feita através de uma mensagem \acrshort{can} enviada para um identificador específico, que funciona como um endereço de \textit{broadcast} para as \acrshort{ecu}s de diagnóstico. A \acrshort{ecu} responsável pela informação solicitada responde com uma mensagem contendo o dado, geralmente em um ID de resposta específico. Os dados recebidos frequentemente precisam ser decodificados utilizando fórmulas específicas fornecidas pela norma SAE J1979 para serem convertidos em unidades compreensíveis (e.g., km/h, RPM) (SITOHANG, 2014).
+
+\subsection{Microcontroladores para Aplicações IoT}
+
+A escolha do microcontrolador é uma etapa crucial no desenvolvimento de um dispositivo de aquisição de dados. Nesta escolha, deve-se considerar principalmente suas capacidades de comunicação sem fio, custos e compatibilidade com os requisitos do projeto. Trabalhos vistos na revisão bibliográfica da área exploraram diferentes plataformas:
+
+\begin{itemize}
+
+\item \textbf{Atmega168 e Arduino UNO:} Utilizados em projetos de baixo custo para aquisição de dados de sensores e \textit{data logging}, demonstrando a viabilidade de plataformas mais simples para aplicações veiculares.
+
+\item \textbf{PIC:} Microcontroladores da Microchip foram a base para o desenvolvimento de \textit{scanners} de diagnóstico, embora a integração com tecnologias mais recentes possa apresentar desafios.
+
+\item \textbf{Raspberry Pi:} Como um computador de placa única, oferece maior poder de processamento, sendo utilizado para diagnósticos em tempo real e processamento de dados mais complexos.
+
+\item \textbf{ESP32:} Este microcontrolador da Espressif Systems se destaca por sua conectividade Wi-Fi e Bluetooth integrada, baixo custo e a presença de um controlador CAN embarcado, tornando-o uma escolha ideal para projetos de IoT automotiva que exigem comunicação sem fio. Embora possua o controlador CAN, ainda necessita de um \textit{transceiver} externo (como o SN65HVD230) para a interface com a camada física da rede.
+
+\end{itemize}
+
+\clearpage
+
+\section{Revisão da Literatura}
+
+A literatura sobre diagnóstico e monitoramento veicular via porta \acrshort{obd} apresenta diversas abordagens que variam em \textit{hardware}, \textit{software}, arquitetura e objetivos. Esta revisão analisa um conjunto de trabalhos para contextualizar e destacar as contribuições do presente projeto. A análise está organizada por temas centrais, comparando as soluções existentes com a arquitetura proposta neste trabalho, a criação de um leitor com microcontrolador (3.1), armazenamento em um banco de dados online (3.2) e uso de análise preditiva com \acrshort{ia} (3.3) e escalabilidade (3.4).
+
+\subsection{\textit{Hardware}: \textit{Scanners} comerciais e soluções customizadas} 
+
+A análise da literatura revela três estratégias principais para a aquisição de dados da rede veicular: o uso de \textit{scanners} comerciais simples e prontos, completos e caros, ou o desenvolvimento de hardware personalizado.
+
+A primeira abordagem, focada na conveniência e rapidez de implementação, utilizou interfaces comerciais. Júnior (2009) exemplifica essa estratégia ao empregar uma interface {VAG-COM} para se comunicar com um Volkswagen Gol. A escolha foi pragmática, pois a VAG-COM era uma das poucas soluções capazes de interagir com o protocolo {KW1281} do veículo em questão. De forma semelhante, no desenvolvimento do sistema ``\textit{VEHICLE-MANAGER}"  (MARQUES, 2019), utilizou-se um \textit{scanner} {ELM327} com comunicação Bluetooth. Este dispositivo, mais genérico que o VAG-COM, atua como uma ``caixa-preta'' que traduz os comandos da \acrshort{ecu} para um formato acessível a um aplicativo Android. A principal limitação dessas abordagens é a rigidez, o desenvolvedor fica restrito às funcionalidades, protocolos e limitações impostas pelo fabricante do \textit{scanner}.
+
+Em contrapartida, a segunda abordagem, que busca maior flexibilidade e controle, foca na criação de hardware próprio. Trabalhos como o de Zhipeng (2024) e Vernizzi (2024) optaram por essa metodologia. Zhipeng (2024) desenvolveu um \textit{datalogger} utilizando um {Raspberry Pi} em conjunto com um transceptor {CAN MCP2515}, criando uma ferramenta de baixo custo para a coleta e análise de dados em tempo real através de uma Interface Humano-Computador (IHC) em um LCD. Por outro lado, Vernizzi (2024) utilizou um microcontrolador {ESP32}, também com um transceptor \acrshort{can}, para não apenas adquirir os dados, mas também transmiti-los via \acrshort{wifi}(do inglês, \textit{wireless fidelity}) e, simultaneamente, garantir a integridade com um \textit{backup} em cartão SD (do inglês, \textit{Secure Digital}). A justificativa para essa customização é que plataformas como o Raspberry Pi oferecem desempenho e capacidade de multitarefa superiores para processar os dados em tempo real, algo essencial para aplicações mais complexas (MONIAGA et al., 2018).
+
+Nesse sentido, este trabalho alinha-se à segunda vertente. A decisão de criar um leitor próprio com microcontrolador não é apenas um exercício de desenvolvimento, mas uma escolha estratégica para superar a inflexibilidade dos \textit{scanners} comerciais. Ter controle total sobre o \textit{hardware} de aquisição é um pilar fundamental que permite não só a adaptação a diferentes protocolos em baixo nível, mas também garante que o fluxo de dados seja otimizado para a arquitetura de nuvem e para os requisitos da análise de \acrshort{ia}, que demandam um conjunto de dados rico e específico, muitas vezes não fornecido por leitores genéricos.
+
+\subsection{Plataformas de software e de comunicação}
+
+A forma como os dados são processados, transmitidos e apresentados também varia significativamente. Muitas soluções dependem de dispositivos locais. O sistema de Júnior (2009) é um exemplo claro de uma arquitetura dependente de um PC, onde um {\textit{notebook} atua como intermediário obrigatório} para processar os dados da interface VAG-COM e retransmiti-los via \textit{Bluetooth} para um dispositivo móvel. Essa dependência de um computador limita a mobilidade e a aplicação prática do sistema.
+
+Outros trabalhos, como o de {Andria et al. (2016)} e {Marques (2019)}, adotaram uma abordagem centrada em dispositivos móveis, onde um aplicativo é a principal interface para coleta e visualização dos dados em tempo real. Embora mais práticas, essas soluções ainda mantêm os dados descentralizados e confinados ao dispositivo local, dificultando a criação de um histórico de utilização consolidado e análises de dados longevos.
+
+Reconhecendo a necessidade de flexibilidade na comunicação, o trabalho de Baek e Jang (2014) propôs um conector \acrshort{obd} integrado com múltiplos módulos de comunicação. O objetivo era superar a limitação de conectores que suportam apenas um método de comunicação, permitindo que o usuário se conecte a qualquer dispositivo, seja a curta ou longa distância.
+
+\subsection{Finalidade da Aplicação e Profundidade da Análise}
+
+Os objetivos das aplicações desenvolvidas na literatura também são diversos. Alguns focam estritamente no diagnóstico de falhas, como o sistema proposto por Singh et al. (2021), que utiliza um Raspberry Pi e a biblioteca \textit{pyOBD} para ler e interpretar \acrshort{dtc}s, informando o usuário sobre problemas específicos para facilitar a manutenção.
+
+Outros trabalhos focam na análise de comportamento do motorista (ANDRIA et al., 2016), desenvolvendo uma plataforma que, além dos dados do \acrshort{obd}, utiliza uma Unidade de Medição Inercial (\acrshort{imu}) para analisar o estilo de condução, classificando-o como ``moderado'' ou ``agressivo'' com base em padrões de aceleração e troca de marchas, visando à economia de combustível e à segurança.
+
+Ainda, há aplicações voltadas para o gerenciamento de frotas (MARQUES, 2019), cujo objetivo é monitorar parâmetros como quilometragem, temperatura e localização para otimizar a gestão dos veículos de uma empresa específica.
+
+Portanto, este projeto se posiciona como uma solução mais completa e profunda. Ele não se limita a exibir dados de diagnóstico ou a classificar um comportamento passado. Ao criar um histórico de utilização do carro em um banco de dados, o projeto permite uma camada de análise superior: a análise preditiva com \acrshort{ia}. O objetivo não é apenas reativo (informar uma falha que já ocorreu) ou descritivo (classificar um estilo de condução), mas também proativo: prever comportamentos e potenciais falhas com base nos dados históricos. Isso representa um avanço significativo, transformando o sistema de um simples monitor para uma ferramenta de controle e inteligência veicular.
+
+\subsection{Escalabilidade e Flexibilidade de Protocolos}
+
+Finalmente, a questão da escalabilidade é uma limitação notável em vários trabalhos. A solução de Júnior (2009) é um exemplo claro de baixa escalabilidade, pois está intrinsecamente ligada ao protocolo proprietário KW1281, sendo inaplicável a veículos de outros fabricantes.
+
+A arquitetura deste trabalho foi feita de tal forma que se torna inerentemente escalável. A combinação de \textit{hardware} customizado e modificável e uma {plataforma de dados em nuvem} desacoplada permite uma adaptação muito mais robusta. O hardware pode ser reprogramado em baixo nível para interpretar diferentes estruturas e protocolos de mensagens \acrshort{can}. A plataforma de software na nuvem, por sua vez, pode ser atualizada para suportar novos modelos de dados e novos protocolos sem a necessidade de alterar o dispositivo embarcado. Essa flexibilidade garante que o projeto possa ser adaptado para diferentes veículos e protocolos no futuro, além de permitir a expansão contínua dos modelos de \acrshort{ia} à medida que mais dados são coletados.
+
+Em suma, a análise da literatura mostra um campo ativo com soluções pontuais para problemas específicos de diagnóstico e monitoramento. O presente trabalho se diferencia ao propor uma arquitetura integrada, inteligente e escalável que não apenas coleta dados, mas os transforma em conhecimento preditivo, apresentando um passo à frente no estado da arte do monitoramento veicular.
+
+\subsection{Considerações Finais}
+
+A partir da análise comparativa, este trabalho se distingue da literatura existente ao apresentar uma arquitetura integrada que avança sobre as soluções anteriores em quatro eixos fundamentais. 
+
+Primeiramente, no âmbito do \textit{hardware}, a opção por uma solução customizada não apenas supera a inflexibilidade dos \textit{scanners} comerciais, mas serve como um alicerce estratégico para otimizar o fluxo de dados para os requisitos de nuvem e de \acrshort{ia}. Em segundo lugar, a arquitetura de \textit{software}, ao eliminar a dependência de dispositivos intermediários (um \textit{notebook} ou um aplicativo \textit{mobile})  para a coleta e armazenamento de dados e centralizar os dados em uma plataforma online, além de criar um histórico de uso do veículo acessível de qualquer lugar, a qualquer momento.
+
+Essa centralização, por sua vez, resolve a limitação das abordagens locais, o principal diferencial do projeto: a transição de uma finalidade reativa (diagnóstico) ou descritiva para uma abordagem proativa e preditiva, tornando o sistema em uma ferramenta de inteligência veicular. Por fim, a combinação do \textit{hardware} reprogramável e de uma plataforma em nuvem confere ao sistema uma escalabilidade e flexibilidade inerentes, permitindo sua adaptação futura a novos protocolos e veículos. 
+
+Dessa forma, o presente projeto não representa apenas um avanço incremental, mas propõe um novo paradigma para o monitoramento veicular, integrando \textit{hardware}, conectividade em nuvem e análise preditiva de forma coesa e escalável.
+
+\clearpage
+
+\section{Metodologia}
+
+Este capítulo apresenta uma descrição detalhada dos recursos, ferramentas e procedimentos metodológicos empregados para o entendimento e desenvolvimento do sistema de análise veicular proposto. Inicialmente, são especificados os componentes de hardware essenciais. Em seguida, são detalhadas as ferramentas de software, linguagens de programação e bibliotecas selecionadas para a implementação da leitura do protocolo de diagnóstico, o processamento dos dados, o desenvolvimento da análise inteligente e a criação da interface de visualização. A metodologia descreve o passo a passo da execução do projeto, desde a montagem do circuito eletrônico e a programação de baixo nível do protocolo, até a integração dos módulos de software e a validação funcional do sistema completo no veículo, garantindo assim a clareza e a reprodutibilidade do trabalho.
+
+\subsection{Materiais}
+
+\begin{itemize}
+
+\item \textbf{Hardware:}
+
+\begin{itemize}
+
+\item Microcontrolador ESP 32.
+
+\item \textit{Transceiver} K-Line para fazer a interface de nível de tensão entre o microcontrolador e a K-Line do veículo.
+
+\item Conector \acrshort{obd} macho com acesso aos pinos.
+
+\item Componentes eletrônicos passivos (resistores, capacitores) para o circuito de interface.
+
+\item Fonte de alimentação para o microcontrolador (conversor 12V para 5V).
+
+\item Veículo-alvo: Volkswagen Polo Classic 2000.
+
+\end{itemize}
+
+\item \textbf{Software:}
+
+Toda a arquitetura de software do projeto será desenvolvida utilizando as linguagens Python 3 e MicroPython, selecionadas por sua versatilidade e pelo robusto ecossistema de bibliotecas que suportam desde a comunicação de baixo nível até o desenvolvimento web. O software embarcado no ESP32 foi projetado para ser o núcleo do sistema, responsável por executar a lógica de comunicação com a \acrshort{ecu}, salvar os dados coletados e transmiti-los para as camadas de armazenamento e visualização. Para a manipulação precisa dos sinais de GPIO, essencial para a inicialização da comunicação com o protocolo do veículo, foi utilizada a biblioteca \textit{pigpio}, enquanto a troca de dados foi gerenciada pela biblioteca pyserial. O armazenamento das informações adota uma estratégia híbrida: localmente, a biblioteca nativa SQLite3 é utilizada para gerenciar um banco de dados leve e eficiente no próprio dispositivo, garantindo a integridade dos dados mesmo \textit{offline}. Em paralelo, será estruturado e configurado um banco de dados em nuvem, para onde os dados locais são periodicamente sincronizados, assegurando o armazenamento de longo prazo e a acessibilidade remota. Por fim, para a interface do usuário, será desenvolvida uma aplicação web utilizando o \textit{microframework} Flask, que serve os dados processados para um \textit{dashboard} interativo.
+
+\end{itemize}
+
+\subsection{Métodos}
+
+O desenvolvimento será dividido nas seguintes etapas:
+
+\begin{enumerate}
+
+\item \textbf{Construção da Interface de Hardware:} Será montado um circuito com o \textit{transceiver} L9637D (STMICROELETRONICS, 2013). A alimentação principal do circuito integrado (\acrshort{ci}) virá dos 12V do pino 16 do \acrshort{obd}, e a alimentação de referência lógica virá do microcontrolador. A K-Line do \acrshort{ci} será conectada ao pino 7 do OBD. Os pinos de TX e RX lógicos do \acrshort{ci} serão conectados aos pinos UART (TX/RX).
+
+\item \textbf{Implementação da Comunicação de Baixo Nível:}
+
+A comunicação com a \acrshort{ecu} do veículo é estabelecida em duas etapas fundamentais. Primeiramente, realiza-se o procedimento de inicialização, conhecido como ``5-Baud Init". Para esta fase crítica, foi desenvolvida uma rotina que utiliza a biblioteca pigpio para gerar os pulsos elétricos com a temporização precisa necessária ao envio do byte de endereço, estabelecendo assim o \textit{handshake} inicial com a \acrshort{ecu}. Após a conclusão bem-sucedida desta etapa, o software passará a comunicar-se na velocidade padrão de 10.4 kbaud, enviando requisições de \acrshort{pid}s, conforme o padrão ISO 9141-2, e realizando a leitura dos protocolos e das respostas correspondentes. Em uma fase subsequente, serão implementados os comandos para acessar os blocos de medição do protocolo, permitindo a extração de dados de diagnóstico mais avançados e específicos do fabricante.
+
+\item \textbf{Desenvolvimento do Módulo de Dados:} Uma camada de software será criada para tratar os bytes crus recebidos da \acrshort{ecu}, aplicando as fórmulas de conversão padrão para obter valores legíveis (ex: RPM, temperatura). Estes dados, juntamente com um \textit{timestamp}, serão armazenados em um banco de dados SQLite.
+
+\item \textbf{Desenvolvimento da Aplicação de Visualização:} Uma aplicação web, com o \textit{microframework} Flask, será desenvolvida. Esta aplicação irá ler os dados do banco e exibi-los em tempo real em gráficos e mostradores em uma página web acessível por um navegador.
+
+\item \textbf{Análise Inteligente e Testes:} Com a formação de um grande conjunto de dados históricos, serão aplicadas técnicas de análise estatística, potencializadas por uma ferramenta de inteligência artificial, com o objetivo principal de realizar um estudo comparativo de desempenho do motor operando com gasolina e \acrshort{gnv} (gás natural veicular). Adicionalmente, serão explorados algoritmos simples de detecção de anomalias para identificar desvios em relação ao comportamento padrão do veículo, estabelecendo assim a base para um sistema de diagnóstico preditivo, cuja validação final dependerá de testes práticos.
+
+\item \textbf{Comprovação do Uso de IA:} A validação de sua eficácia, será adotada uma metodologia formal em três estágios. Primeiramente, após a coleta de dados, a aptidão da ferramenta de \acrshort{ia} será testada em sua capacidade de quantificar e diferenciar os padrões de desempenho entre os combustíveis. Em seguida, na validação do diagnóstico preditivo, a eficácia dos algoritmos de detecção de anomalias será medida por sua sensibilidade em identificar irregularidades em relação a uma linha de base de funcionamento normal. Por fim, a validação final será empírica, realizada com testes práticos no veículo, onde os diagnósticos apontados pelo sistema serão confrontados com a condição real do motor para atestar a acurácia e a aplicabilidade prática da solução.
+\end{enumerate}
+
+\clearpage
+
+\section{Planejamento e cronograma de execução}
+O cronograma foi estruturado para concentrar as atividades de pesquisa, planejamento e projeto no \acrshort{tcc} I, estabelecendo uma base teórica e metodológica sólida (Tabela 1). As atividades práticas de desenvolvimento, montagem, testes e análise de resultados estão alocadas para o \acrshort{tcc} II (Tabela 2), focando na implementação e validação da solução proposta.
+
+\begin{table}[!ht]
+\centering
+\caption{Cronograma de Atividades - \acrshort{tcc} I (2025/1)}
+\label{tab:cronograma_tcc1}
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Foco Teórico e Planejamento}}} & \multicolumn{6}{c|}{\textbf{Meses}} \\ \cline{2-7} 
+\multicolumn{1}{|c|}{} & \textbf{Fev} & \textbf{Mar} & \textbf{Abr} & \textbf{Mai} & \textbf{Jun} & \textbf{Jul} \\ \hline
+1. Revisão Bibliográfica Aprofundada & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & & & \\ \hline
+2. Definição da Arquitetura do Sistema & & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+3. Detalhamento do Projeto & & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \\ \hline
+4. Estudo de Algoritmos para Análise & & & & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}\\ \hline
+5. Compra e Entrega de Componentes & & & & &  & \cellcolor[HTML]{C0C0C0} \\ \hline
+6. Redação da Monografia (Parte I) & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\caption{Cronograma de Atividades - \acrshort{tcc} II (2026/2)}
+\label{tab:cronograma_tcc2}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Foco Prático e Desenvolvimento}}} &
+\multicolumn{5}{c|}{\textbf{Meses}} \\ \cline{2-6} 
+\multicolumn{1}{|c|}{} & \textbf{Ago} & \textbf{Set} & \textbf{Out} & \textbf{Nov} & \textbf{Dez} \\ \hline
+7. Montagem e Teste do Hardware & \cellcolor[HTML]{C0C0C0} & & & & \\ \hline
+8. Dev. Leitor de Protocolo & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}& & \\ \hline
+9. Dev. Armazenamento e Visualização & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+10. Coleta e Validação inicial de dados & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+11. Dev. Módulo de Análise Inteligente & & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \\ \hline
+12. Integração e Testes Finais & & & &  \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} \\ \hline
+13. Redação da Monografia (Parte II) & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} \\ \hline
+14. Preparação para a Defesa Final & & & & &  \cellcolor[HTML]{C0C0C0} \\ \hline
+\end{tabular}
+\end{table}
+% Adicionando uma bibliografia simples para começar
+\clearpage
+\addcontentsline{toc}{section}{Referências}
+
+\begin{thebibliography}{9}
+
+\bibitem{behavior}
+ANDRIA, G. et al. Development of an automotive data acquisition platform for analysis of driving behavior, \textit{Measurement}, Elsevier, 2016.
+
+\bibitem{baek}
+BAEK, S., JANG, J. Implementation of integrated OBD-II connector with external network. \textit{Information Systems}, Elsevier, 2014.
+
+\bibitem{bosch}
+BOSCH, R. CAN specification. [S.l.], 2012. Disponível em: \url{http://esd.cs.ucr.edu/webres/can20.pdf.}.
+
+\bibitem{cap}
+CAPELLI, A. Eletroeletrônica automotiva: injeção eletrônica, arquitetura do motor e sistemas embarcados. São Paulo: Saraiva, 2010.
+
+\bibitem{eletronics}
+ELECTRONICS, C. CAN bus sniffer - Reverse engineer vehicle data [SavvyCAN/Wireshark]. CSS Eletronics, 2024. Disponível em: \url{https://www.csselectronics.com/pages/can-bus-sniffer-reverse-engineering}.
+
+\bibitem{eletronics2}
+ELECTRONICS, C. CAN bus the ultimate guide. CSS Eletronics, 2023. Disponível em: \url{https://www.csselectronics.com/pages/can-bus-ultimate-guide}.
+
+\bibitem{gui}
+GUIMARÃES, A. A. Eletrônica embarcada automotiva. São Paulo: Saraiva, 2007.
+
+\bibitem{safety}
+IQBAL, A. et al. Adoption of IOT in automobiles for driver’s safety key considerations and major challenges, International Journal of Scientific and Technology Research, Volume 8, Issue 09, 2019.
+
+\bibitem{transformation}
+LLOPIS-ALBERT, C.; RUBIO, F.; VALERO, F. Impact of digital transformation on the automotive industry, \textit{Technological Forecasting and Social Change}, Elsevier, 2020.
+
+\bibitem{marques2019}
+MARQUES, A. E. Vehicle-Manager: Sistema de monitoramento veicular. Orientador: Prof. Me. Alexandre Stürmer Wolf. 2019. TCC (Graduação em Engenharia de Computação). Centro de Ciências Exatas e Tecnológicas - Universidade do Vale do Taquari, 2019.
+
+\bibitem{moniaga}
+MONIAGA, J. V. et al. Diagnostics vehicle’s condition using OBD-II and Raspberry Pi technology: study literature. 2nd International Conference on Computing and Applied Informatics, 2017.
+
+\bibitem{muki01_github}
+muki01, "OBD2 K-line Reader," \textit{GitHub repository}. [Online]. Available: \url{https://github.com/muki01/OBD2_K-line_Reader}.
+
+\bibitem{obd_pid}
+OBD2 codes and meanings. Disponível em: \url{https://bads.lt/en/blog/technical-information/obd2-codes-and-meanings}.
+
+\bibitem{junior2009}
+JÚNIOR, A. S. S. Sistema de monitoramento eletrônico automotivo. Orientadora: Profª. MC. Maria Marony Sousa F. Nascimento. 2009. TCC (Graduação em Engenharia de Computação). Faculdade de Tecnologia e Ciências Sociais Aplicadas - Centro Universitário de Brasília, Brasília, 2009.
+
+\bibitem{sitohang}
+SITOHANG, B.; SIM, A. X. A. OBD-II standard car engine diagnostic software development. International Conference on Data and Software Engineering (ICODSE), 2014.
+
+\bibitem{singh}
+SINGH, S. K.; SINGH, A. K.; SHARMA, A. OBD - II based intelligent vehicular diagnostic system using IoT. Conference: International Semantic Intelligence Conference, 2021.
+
+\bibitem{l9637d_datasheet}
+STMICROELETRONICS, "L9637D - ISO 9141 interface," \textit{Datasheet}. STMicroelectronics, 2013. Available: \url{https://www.st.com/resource/en/datasheet/l9637d.pdf}.
+
+\bibitem{vernizzi2024}
+VERNIZZI, R. C. Desenvolvimento de dispositivo para aquisição de dados da rede CAN de um veículo e transmissão através da Internet. Orientador: Prof. Dr. Marco Henrique Terra. 2024. TCC (Graduação em Engenharia Elétrica) - Escola de Engenharia de São Carlos - Universidade de São Paulo, 2024.
+
+\bibitem{zhipeng}
+YU, Z. Desenvolvimento de um datalogger da rede CAN veicular via Raspberry Pi. Orientadora: Profª . Drª Rosângela Bach Rodrigues dos Santos. 2024. TCC (Graduação em Engenharia Elétrica) - Universidade Tecnológica Federal do Paraná, 2024.
+
+\end{thebibliography}
+ 
+\end{document}
