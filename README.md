@@ -122,7 +122,7 @@ Antes de compilar, ajuste os parâmetros de conectividade no código-fonte do fi
 
    ```c
    #define MQTT_BROKER_URI      "mqtts://test.mosquitto.org:8883"
-   #define MQTT_TOPIC           "ls-praxedes/scanner-obd2/esp32"
+   #define MQTT_TOPIC           "ls-praxedes/scanner-obd2/{vehicle_id}/#"
    #define MQTT_PUB_INTERVAL_MS 1000
    ```
 
