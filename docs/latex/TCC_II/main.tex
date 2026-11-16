@@ -1,0 +1,1707 @@
+\documentclass[
+	% -- opções da classe memoir --
+	12pt,				% tamanho da fonte
+	openright,			% capítulos começam em pág ímpar (insere página vazia caso preciso)
+	twoside,			% para impressão em recto e verso. Oposto a oneside
+	a4paper,			% tamanho do papel.
+	% -- opções do pacote babel --
+	english,			% idioma adicional para hifenização
+	brazil				% o último idioma é o principal do documento
+	]{abntex2}
+
+% ---
+% Pacotes básicos do modelo abnTeX2
+% ---
+\usepackage{lmodern}			% Usa a fonte Latin Modern
+\usepackage[T1]{fontenc}		% Seleção de códigos de fonte.
+\usepackage[utf8]{inputenc}
+% Codificação do documento (conversão automática dos acentos)
+\usepackage{indentfirst}		% Indenta o primeiro parágrafo de cada seção.
+\usepackage{color}				% Controle das cores
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{graphicx}			% Inclusão de gráficos
+\usepackage{microtype} 			% Para melhorias de justificação
+\usepackage{amsmath}			% Ambientes matemáticos formais
+\usepackage{booktabs}			% Tabelas no padrão IBGE (sem linhas verticais)
+\usepackage{multirow}			% Mesclagem de linhas em tabelas/quadros
+\usepackage{array}				% Formatação avançada de colunas em tabelas/quadros
+\usepackage[acronym,nonumberlist]{glossaries}
+% Suporte aos comandos \acrshort, \acrlong, \gls
+
+% ---
+% Pacotes de citações padrão abnTeX2
+% ---
+\usepackage[brazilian,hyperpageref]{backref}	% Páginas com as citações na bibliografia
+\usepackage[alf]{abntex2cite}					% Citações padrão ABNT (autor-data)
+
+% ---
+% Configurações do pacote backref (padrão abnTeX2)
+% ---
+\renewcommand{\backrefpagesname}{Citado na(s) página(s):~}
+\renewcommand{\backref}{}
+\renewcommand*{\backrefalt}[4]{%
+	\ifcase #1 %
+		Nenhuma citação no texto.%
+	\or
+		Citado na página #2.%
+	\else
+		Citado #1 vezes nas páginas #2.%
+	\fi}%
+
+% ---
+% Caminhos de imagens e contador auxiliar de Quadros
+% ---
+\graphicspath{{./}{docs/latex/TCC_II/}}
+\newcounter{quadro}
+
+% ---
+% Espaçamentos entre linhas e parágrafos (padrão abnTeX2)
+% ---
+\setlength{\parindent}{1.3cm}
+\setlength{\parskip}{0.2cm}
+\emergencystretch=1.5em
+
+% ---
+% Definições de siglas
+% ---
+\makeglossaries
+\glsdisablehyper
+\input{siglas}
+
+% ---
+% Informações de dados para CAPA e FOLHA DE ROSTO (abnTeX2)
+% ---
+\titulo{Telemetria Automotiva Inteligente: Sistema Embarcado via OBD-II/CAN Integrado à
+Nuvem para Detecção Não Supervisionada de Anomalias}
+\autor{Lucas Praxedes Fischer de Mattos}
+\local{São José dos Campos}
+\data{2026}
+\orientador{Prof. Dr. André Marcorin de Oliveira}
+\instituicao{%
+  Universidade Federal de São Paulo -- UNIFESP
+  \par
+  Instituto de Ciência e Tecnologia
+  \par
+  Bacharelado em Engenharia da Computação}
+\tipotrabalho{Trabalho de Conclusão de Curso (Graduação)}
+\preambulo{Trabalho de Conclusão de Curso apresentado ao Instituto de Ciência e
+Tecnologia da Universidade Federal de São Paulo -- Campus São José dos Campos, como
+exigência parcial para obtenção do título de Bacharel em Engenharia da Computação.}
+
+% ---
+% Configurações de aparência do PDF final
+% ---
+\makeatletter
+\hypersetup{
+     	pdftitle={\@title},
+	    pdfauthor={\@author},
+    	pdfsubject={\imprimirpreambulo},
+	    pdfcreator={LaTeX with abnTeX2},
+		colorlinks=true,
+    	linkcolor=black,
+    	citecolor=black,
+    	filecolor=black,
+		urlcolor=black,
+		bookmarksdepth=4
+}
+\makeatother
+
+% ---
+% Início do documento
+% ---
+\begin{document}
+
+\frenchspacing
+
+% =========================================================================
+% ELEMENTOS PRÉ-TEXTUAIS
+% =========================================================================
+\imprimircapa
+
+\imprimirfolhaderosto*
+
+% ---
+% Declaração sobre o uso de Inteligência Artificial Generativa (IN nº 06/2026 UNIFESP)
+% ---
+\pretextualchapter{Declaração sobre o uso de Inteligência Artificial Generativa}
+
+Durante a elaboração deste trabalho, o autor utilizou a ferramenta de Inteligência
+Artificial Generativa (\acrshort{iag}) Google Gemini (integrada ao ambiente de
+desenvolvimento) com a finalidade de apoio na revisão linguística e gramatical,
+organização estrutural de seções previamente concebidas pelo autor e verificação
+exploratória de lacunas técnicas (\textit{gap analysis}) e casos de borda na
+documentação arquitetural e na suíte de testes do projeto. Após esse uso, o autor
+revisou, validou empiricamente e editou o conteúdo conforme necessário, assumindo
+integral e exclusiva responsabilidade intelectual e técnica pelo conteúdo do trabalho.
+\cleardoublepage
+
+% ---
+% RESUMO e ABSTRACT (ABNT NBR 6028 / Alto Nível Arquitetural)
+% ---
+\setlength{\absparsep}{18pt}
+\begin{resumo}
+A crescente complexidade dos sistemas eletrônicos automotivos evidencia a importância da
+coleta e análise contínua de dados operacionais dos veículos; contudo, o acesso a essas
+informações em tempo real permanece restrito em automóveis comerciais de entrada, ao
+passo que ferramentas convencionais de oficina limitam-se à leitura reativa de falhas já
+consolidadas. Este trabalho apresenta o desenvolvimento de um sistema computacional
+embarcado integrado à nuvem via barramento \textit{Controller Area Network} (CAN) e
+padrão \textit{On-Board Diagnostics Version II} (OBD-II), voltado ao monitoramento
+telemétrico ativo e à detecção não supervisionada de anomalias operacionais. A
+metodologia divide-se na construção de uma unidade de aquisição embarcada baseada em
+microcontrolador de núcleo duplo operando sobre sistema operacional de tempo real sob
+arquitetura modular em linguagem C para leitura periódica de rotação do motor,
+velocidade veicular e temperatura do líquido de arrefecimento, aliada à transmissão sem
+fio via protocolo de mensageria seguro com criptografia na camada de transporte. Na
+infraestrutura de servidor, implementou-se um serviço de aplicação assíncrono
+responsável pela validação de contratos de dados, persistência transacional em banco de
+dados relacional e disponibilização das séries temporais em um painel de visualização
+interativo em tempo real, complementado pela modelagem analítica de um fluxo de
+aprendizado de máquina não supervisionado fundamentado em árvores de isolamento para
+identificação proativa de desvios térmicos e cinemáticos no funcionamento do motor.
+
+\textbf{Palavras-chave}: telemetria veicular. OBD-II. sistemas embarcados. internet das
+coisas. detecção de anomalias.
+\end{resumo}
+
+\begin{resumo}[Abstract]
+\begin{otherlanguage*}{english}
+The growing complexity of automotive electronic systems highlights the importance of
+continuous collection and analysis of vehicle operational data; however, real-time
+access to this information remains restricted in entry-level commercial vehicles, while
+conventional diagnostic tools are largely limited to reactive fault reading. This work
+presents the development of a cloud-integrated embedded computing system using the
+Controller Area Network (CAN) bus and the On-Board Diagnostics Version II (OBD-II)
+standard, aimed at active telemetric monitoring and unsupervised detection of
+operational anomalies. The methodology is structured around an embedded acquisition unit
+based on a dual-core microcontroller running a real-time operating system under a
+modular architecture in C language for periodic reading of engine speed, vehicle speed,
+and coolant temperature, coupled with wireless transmission via a secure messaging
+protocol with transport-layer encryption. On the server infrastructure, an asynchronous
+application service was implemented to perform data contract validation, transactional
+persistence in a relational database, and real-time visualization through an interactive
+dashboard, complemented by the analytical modeling of an unsupervised machine learning
+pipeline based on isolation trees for proactive identification of thermal and kinematic
+deviations in engine operation.
+
+\vspace{\onelineskip}
+
+\noindent
+\textbf{Keywords}: vehicular telemetry. OBD-II. embedded systems. internet of things.
+anomaly detection.
+\end{otherlanguage*}
+\end{resumo}
+
+% ---
+% Lista de ilustrações
+% ---
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+
+% ---
+% Lista de tabelas
+% ---
+\pdfbookmark[0]{\listtablename}{lot}
+\listoftables*
+\cleardoublepage
+
+% ---
+% Lista de abreviaturas e siglas (padrão abnTeX2)
+% ---
+\begin{siglas}
+  \item[ACID] \textit{Atomicity, Consistency, Isolation, Durability}
+  \item[ACL] \textit{Access Control List}
+  \item[API] \textit{Application Programming Interface}
+  \item[ASGI] \textit{Asynchronous Server Gateway Interface}
+  \item[CAN] \textit{Controller Area Network}
+  \item[CBA] \textit{Component-Based Architecture}
+  \item[CI] Circuito Integrado
+  \item[CRISP-DM] \textit{Cross-Industry Standard Process for Data Mining}
+  \item[DLC] \textit{Data Length Code}
+  \item[DTC] \textit{Diagnostic Trouble Codes}
+  \item[ECU] \textit{Electronic Control Unit}
+  \item[ESP-IDF] \textit{Espressif IoT Development Framework}
+  \item[GPIO] \textit{General Purpose Input/Output}
+  \item[GPOS] \textit{General-Purpose Operating System}
+  \item[HAL] \textit{Hardware Abstraction Layer}
+  \item[HTTP] \textit{Hypertext Transfer Protocol}
+  \item[IA] Inteligência Artificial
+  \item[IAG] Inteligência Artificial Generativa
+  \item[IHC] Interface Humano-Computador
+  \item[IMU] Unidade de Medição Inercial
+  \item[IoT] \textit{Internet of Things}
+  \item[ISO] \textit{International Organization for Standardization}
+  \item[ISR] \textit{Interrupt Service Routine}
+  \item[JSON] \textit{JavaScript Object Notation}
+  \item[MITM] \textit{Man-in-the-Middle}
+  \item[ML] \textit{Machine Learning}
+  \item[MQTT] \textit{Message Queuing Telemetry Transport}
+  \item[MQTTS] \textit{Message Queuing Telemetry Transport Secure}
+  \item[OBD-II] \textit{On-Board Diagnostics Version II}
+  \item[ORM] \textit{Object-Relational Mapping}
+  \item[OSI] \textit{Open Systems Interconnection}
+  \item[PC] \textit{Personal Computer}
+  \item[PID] \textit{Parameters Identification}
+  \item[RPM] Rotações por Minuto
+  \item[RTOS] \textit{Real-Time Operating System}
+  \item[SAE] \textit{Society of Automotive Engineers}
+  \item[SD] \textit{Secure Digital}
+  \item[SMP] \textit{Symmetric Multiprocessing}
+  \item[SQL] \textit{Structured Query Language}
+  \item[SSOT] \textit{Single Source of Truth}
+  \item[TCC] Trabalho de Conclusão de Curso
+  \item[TLS] \textit{Transport Layer Security}
+  \item[TWAI] \textit{Two-Wire Automotive Interface}
+  \item[UART] \textit{Universal Asynchronous Receiver-Transmitter}
+  \item[UCE] Unidade de Controle Eletrônico
+  \item[Wi-Fi] \textit{Wireless Fidelity}
+\end{siglas}
+
+% ---
+% Sumário
+% ---
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% =========================================================================
+% ELEMENTOS TEXTUAIS
+% =========================================================================
+\textual
+\glsresetall
+
+\chapter{Introdução}
+
+A indústria automotiva tem passado por uma profunda transformação impulsionada pela
+demanda crescente por veículos mais inteligentes, conectados e eficientes
+\cite{llopis2021}. Nesse cenário, a capacidade de coletar, processar e transmitir dados
+veiculares em tempo real consolidou-se como um pilar tecnológico para a engenharia
+automotiva moderna. A ampla gama de informações geradas pelos subsistemas eletrônicos
+embarcados viabiliza desde o monitoramento contínuo da integridade termomecânica do
+motor até o desenvolvimento de arquiteturas de manutenção preditiva e análise de perfil
+de condução \cite{andria2016}.
+
+No núcleo da comunicação interna dos automóveis contemporâneos encontra-se a rede
+\acrshort{can} (do inglês, \textit{Controller Area Network}), um protocolo de barramento
+serial diferencial que se destaca por sua robustez eletromagnética, determinismo na
+arbitragem de mensagens e elevada confiabilidade operacional \cite{bosch2012}. Embora
+essa infraestrutura de comunicação seja onipresente nas Unidades de Controle Eletrônico
+(\acrshort{ecu}s), o acesso estruturado às grandezas físicas que trafegam no barramento
+permanece restrito para o usuário final, sobretudo em veículos compactos de passeio,
+cujos painéis de instrumentos suprimem indicadores detalhados de saúde térmica e
+dinâmica do motor \cite{guimaraes2007}.
+
+A modificação invasiva dos chicotes ou dos sistemas eletrônicos originais para extração
+dessas grandezas mostra-se técnica e economicamente inviável, implicando riscos à
+segurança operacional e perda de garantia de fábrica. Uma abordagem de engenharia eficaz
+e não intrusiva consiste na utilização de analisadores de barramento (\textit{sniffers})
+e dispositivos de aquisição telemétrica conectados à interface padronizada de
+diagnóstico de bordo \acrshort{obd} (do inglês,
+\textit{On-Board Diagnostics Version II}), capturando e interrogando os parâmetros
+operacionais da \acrshort{ecu} no barramento \acrshort{can} sem interferir nas malhas de
+controle críticas do veículo \cite{iso15765,csselectronics2024}.
+
+A convergência entre esses sistemas embarcados de aquisição veicular, tecnologias da
+Internet das Coisas (do inglês, \textit{Internet of Things} -- \acrshort{iot}) para
+conectividade em nuvem e técnicas de aprendizado de máquina (\acrshort{ml}, do inglês
+\textit{Machine Learning}) representa um avanço substancial frente aos leitores de
+diagnóstico convencionais \cite{iqbal2019,singh2021}. Ao transmitir a
+telemetria de borda sob canais criptografados para uma infraestrutura de persistência e
+processamento em nuvem, torna-se possível superar o paradigma puramente reativo dos
+códigos de falha tradicionais, viabilizando a modelagem de mecanismos de detecção não
+supervisionada de anomalias operacionais antes que evoluam para panes mecânicas severas.
+
+\section{Objetivo geral}
+
+O presente trabalho tem como objetivo geral o desenvolvimento de um sistema
+computacional embarcado integrado à nuvem, de baixo custo e alta confiabilidade, voltado
+à telemetria automotiva ativa e à análise preditiva. O sistema é projetado para realizar
+a leitura em tempo real dos parâmetros padronizados da norma \acrshort{sae} J1979 no
+barramento \acrshort{can} (especificamente rotação do motor em \acrshort{rpm},
+velocidade veicular e temperatura do líquido de arrefecimento), efetuar a transmissão
+segura dos pacotes via protocolo \acrshort{mqtts} para um servidor de aplicação com
+persistência relacional transacional, e disponibilizar o monitoramento em um
+\textit{dashboard} interativo aliado à modelagem de detecção não supervisionada de
+anomalias operacionais por meio de aprendizado de máquina (\acrshort{ml}).
+
+\section{Objetivos específicos}
+
+Para alcançar o objetivo geral proposto, estabeleceram-se os seguintes objetivos
+específicos:
+
+\begin{itemize}
+    \item Projetar e integrar o circuito de aquisição embarcado baseado no
+        microcontrolador ESP32 (utilizando seu controlador nativo \acrshort{twai}) e no
+        transceptor \acrshort{can} SN65HVD230 operando a $500\text{ kbaud}$.
+    \item Desenvolver o \textit{firmware} embarcado em linguagem C nativa sobre o
+        \textit{framework} ESP-IDF e sistema operacional de tempo real (\acrshort{rtos})
+        FreeRTOS, estruturado sob Arquitetura Baseada em Componentes (\acrshort{cba}).
+    \item Implementar a camada de transporte seguro via \acrshort{mqtts} sobre
+        \acrshort{tls} v1.2 e o \textit{backend} de ingestão assíncrona em Python
+        (utilizando FastAPI, Pydantic e SQLAlchemy/SQLite).
+    \item Construir uma aplicação \textit{web} interativa em Streamlit para
+        monitoramento telemétrico em tempo real e validação por emulação sintética.
+    \item Estruturar e modelar a arquitetura do \textit{pipeline} de aprendizado de
+        máquina fundamentado na metodologia \acrshort{crispdm} e no algoritmo
+        \textit{Isolation Forest} para detecção não supervisionada de anomalias no
+        funcionamento do motor.
+\end{itemize}
+
+\chapter{Fundamentação Teórica}
+
+Para o desenvolvimento deste trabalho, foram investigados os fundamentos de sistemas
+embarcados automotivos, redes de comunicação veicular sob o padrão \acrshort{obd},
+sistemas operacionais de tempo real, protocolos seguros de mensageria para
+\acrshort{iot} e métodos de aprendizado de máquina para detecção de anomalias, os quais
+são formalizados nas seções a seguir.
+
+\section{Unidade de Controle Eletrônico}
+
+Uma Unidade de Controle Eletrônico (\acrshort{uce}) automotiva, consagrada na literatura
+internacional pela sigla \acrshort{ecu} (do inglês, \textit{Electronic Control Unit}),
+consiste em um sistema computacional embarcado dotado de microcontrolador e memórias não
+voláteis onde residem as rotinas responsáveis pelo gerenciamento de subsistemas
+específicos do veículo \cite{guimaraes2007,andrijauskas2018}.
+
+Nesse sentido, uma \acrshort{ecu} opera de maneira análoga a um computador dedicado de
+tempo real projetado sob restrições estritas de custo, consumo energético e tempo de
+resposta \cite{peckol2008,ganssle2008}. Internamente, sua placa de circuito impresso
+integra unidades de processamento, conversores analógico-digitais e interfaces de
+potência, executando o \textit{software} embarcado ou \textit{firmware} de controle e
+autodiagnóstico dos subsistemas mecânicos e elétricos aos quais se encontra acoplada.
+
+Com a evolução das exigências de eficiência energética, segurança ativa e controle de
+emissões, as montadoras intensificaram a distribuição de módulos eletrônicos pelo
+veículo, abrangendo o controle da injeção eletrônica, transmissão, freios antibloqueio,
+climatização e carroceria, conforme ilustrado na Figura~\ref{fig:uces_automovel}. A
+\acrshort{ecu} principal do motor coordena malhas fechadas de injeção de combustível,
+avanço de ignição, controle de mistura estequiométrica e monitoramento de falhas por
+meio de múltiplos sensores e atuadores distribuídos pelo conjunto motriz
+\cite{capelli2010,guimaraes2007}.
+
+\begin{figure}[!htb]
+	\centering
+	\caption{Unidades de Controle Eletrônico (UCEs) de um automóvel}
+	\includegraphics[width=0.78\textwidth]{imagens/uces_automovel_capelli.jpeg}
+	\legend{Fonte: \citeonline{capelli2010} \textit{apud} \citeonline{yu2024}.}
+	\label{fig:uces_automovel}
+\end{figure}
+
+\section{A rede de comunicação veicular: CAN Bus}
+
+O protocolo \acrshort{can} foi desenvolvido na década de 1980 pela Robert Bosch GmbH e
+consolidou-se como padrão internacional para a comunicação serial entre as diversas
+\acrshort{ecu}s presentes em um veículo \cite{bosch2012}. Sua adoção em larga escala
+pela indústria automotiva decorre de sua elevada confiabilidade, arbitragem não
+destrutiva de barramento e imunidade a interferências eletromagnéticas, requisitos
+críticos no ambiente veicular. A topologia do \acrshort{can} \textit{Bus} baseia-se em
+um barramento compartilhado de par trançado ao qual múltiplos nós se conectam
+paralelamente, reduzindo de modo expressivo a complexidade e a massa dos chicotes
+elétricos em comparação às ligações ponto a ponto \cite{guimaraes2007}.
+
+Na camada física, a sinalização da rede \acrshort{can} de alta velocidade opera por
+transmissão diferencial através de duas linhas: \acrshort{can} \textit{High}
+(\texttt{CAN\_H}) e \acrshort{can} \textit{Low} (\texttt{CAN\_L}), conforme representado
+na Figura~\ref{fig:sinais_can}. Os dados lógicos são codificados em dois estados
+elétricos: dominante (\textit{bit} \texttt{0}) e recessivo (\textit{bit} \texttt{1}). No
+estado recessivo, o potencial elétrico em ambas as linhas repousa em aproximadamente
+$2{,}5\text{ V}$; no estado dominante, a tensão em \texttt{CAN\_H} eleva-se para cerca
+de $3{,}5\text{ V}$ enquanto em \texttt{CAN\_L} reduz-se para aproximadamente
+$1{,}5\text{ V}$, resultando em uma diferença de potencial nominal de $2{,}0\text{ V}$
+\cite{iso11898,csselectronics2023}. Essa característica diferencial assegura que ruídos
+eletromagnéticos induzidos de modo comum afetem ambas as linhas simultaneamente,
+preservando a diferença de tensão e a integridade da informação.
+
+\begin{figure}[!htb]
+	\centering
+	\caption{Sinais elétricos da transmissão CAN}
+	\includegraphics[width=0.75\textwidth]{imagens/sinais_eletricos_can_vernizzi.jpeg}
+	\legend{Fonte: Adaptado de \citeonline{embarcados2020} \textit{apud}
+	\citeonline{vernizzi2024}.}
+	\label{fig:sinais_can}
+\end{figure}
+
+O empacotamento dos \textit{bits} transmitidos compõe quadros estruturados denominados
+\acrshort{can} \textit{frames}, os quais carregam o campo de início de quadro, o
+identificador de arbitragem (de $11\text{ bits}$ no formato padrão ou $29\text{ bits}$
+no formato estendido), o código de comprimento de dados (\acrshort{dlc}, do inglês
+\textit{Data Length Code}), o campo de carga útil (\textit{payload}) de até
+$8\text{ bytes}$ e o verificador cíclico de redundância trocado entre as \acrshort{ecu}s
+\cite{bosch2012,iso11898}.
+
+\section{Diagnóstico de bordo: o padrão OBD-II}
+
+O sistema de Diagnóstico de Bordo (do inglês, \textit{On-Board Diagnostics}) surgiu da
+necessidade regulatória de monitorar continuamente os subsistemas veiculares associados
+ao controle de emissões e à integridade do motor. A sua segunda geração, denominada
+\acrshort{obd}, tornou-se obrigatória nos Estados Unidos a partir de 1996 e,
+posteriormente, foi padronizada internacionalmente, inclusive no mercado brasileiro
+\cite{guimaraes2007}.
+
+O padrão \acrshort{obd} especifica um conector físico trapezoidal de 16 pinos definido
+pela norma \acrshort{sae} J1962, posicionado no habitáculo próximo ao condutor como
+interface universal de diagnóstico, cuja disposição de pinos e protocolos associados é
+apresentada na Figura~\ref{fig:obd2_plug}. Por meio desse conector, torna-se possível
+requisitar grandezas operacionais em tempo real, tais como velocidade veicular, rotação
+do motor (\acrshort{rpm}), temperatura do líquido de arrefecimento e Códigos de Falha de
+Diagnóstico (\acrshort{dtc}, do inglês \textit{Diagnostic Trouble Codes})
+\cite{guimaraes2007,saej1979}.
+
+\begin{figure}[!htb]
+	\centering
+	\caption{Pinagem do conector padronizado OBD-II (SAE J1962) e protocolos de
+	comunicação}
+	\includegraphics[width=0.72\textwidth]{imagens/obd2 plug.png}
+	\legend{Fonte: Adaptado de \citeonline{guimaraes2007}.}
+	\label{fig:obd2_plug}
+\end{figure}
+
+Segundo \citeonline{guimaraes2007}, o autodiagnóstico fundamenta-se no registro de
+códigos \acrshort{dtc} na memória dos módulos eletrônicos sempre que leituras de
+sensores extrapolam os limites operacionais projetados pelo fabricante. Na camada de
+comunicação, a especificação \acrshort{obd} admite cinco protocolos distintos conforme
+os pinos povoados no conector (Figura~\ref{fig:obd2_plug}): \acrshort{sae} J1850 PWM
+(pinos 2 e 10), \acrshort{sae} J1850 VPW (pino 2), ISO 9141-2 / ISO 14230-4
+\textit{K-Line} (pinos 7 e 15) e o padrão ISO 15765-4 baseado em barramento diferencial
+\acrshort{can} nos pinos 6 (\texttt{CAN\_H}) e 14 (\texttt{CAN\_L}), o qual se
+consolidou como o protocolo de alta velocidade obrigatório na frota fabricada a partir
+de 2008 \cite{iso15765,guimaraes2007}.
+
+\subsection{Convergência entre o padrão OBD-II e o protocolo CAN no modelo
+OSI}\label{sec:convergencia_osi}
+
+Historicamente, a convergência entre o padrão \acrshort{obd} e o protocolo
+\acrshort{can} decorreu da necessidade de superar a fragmentação tecnológica da década
+de
+1990, quando cada grupo automotivo adotava barramentos de diagnóstico distintos e
+incompatíveis entre si (como o \acrshort{sae} J1850 PWM na Ford, o \acrshort{sae} J1850
+VPW na General Motors e as variações ISO 9141-2 / ISO 14230-4 \textit{K-Line} em
+montadoras europeias e asiáticas), operando em baixas taxas de transmissão de
+$10{,}4\text{ kbaud}$ a $41{,}6\text{ kbaud}$ \cite{guimaraes2007}. Sob a ótica prática
+de engenharia, à medida que o barramento \acrshort{can} já se consolidava internamente
+nos veículos para interligar as \acrshort{ecu}s de trem de força e segurança ativa em
+tempo real, manter uma segunda rede física exclusiva e lenta apenas para diagnóstico
+externo tornou-se técnica e economicamente redundante. A unificação regulatória via
+norma ISO 15765-4 (\textit{Diagnostics on Controller Area Networks} --- DoCAN) permitiu
+reaproveitar a própria infraestrutura diferencial de par trançado do veículo (pinos 6 e
+14) operando a $250\text{ kbaud}$ ou $500\text{ kbaud}$, elevando a largura de banda de
+diagnóstico em até $48\text{ vezes}$ frente à \textit{K-Line} e garantindo arbitragem
+determinística sem perda de pacotes \cite{iso15765}.
+
+Para compreender de forma rigorosa como o \acrshort{can} e o \acrshort{obd} operam em
+conjunto sem sobreposição de funções, recorre-se ao modelo de referência \acrshort{osi}
+(\textit{Open Systems Interconnection}), estruturado em sete camadas hierárquicas de
+comunicação nas quais cada nível presta serviços à camada imediatamente superior por
+meio do encapsulamento sucessivo de unidades de dados, conforme ilustrado na
+Figura~\ref{fig:modelo_osi_can} \cite{tanenbaum2011,lugli2009}. A especificação original
+do protocolo \acrshort{can} (ISO 11898) define exclusivamente as duas camadas inferiores
+do modelo \acrshort{osi}: a Camada 1 (Física, ou \textit{Physical Layer}), que
+estabelece os níveis elétricos diferenciais e a temporização de \textit{bits}, e a
+Camada 2 (Enlace de Dados, ou \textit{Data Link Layer}), responsável pelo empacotamento
+em quadros de até $8\text{ bytes}$, endereçamento por identificadores, controle de
+acesso ao meio e verificação cíclica de erros, sem atribuir significado semântico ao
+conteúdo da carga útil (\textit{payload}).
+
+Enquanto as camadas intermediárias (Camadas 3 a 6) não são especificadas nativamente
+pelo protocolo \acrshort{can} base e a Camada 7 (Aplicação, ou
+\textit{Application Layer}) permanece aberta para definição pela aplicação
+(Figura~\ref{fig:modelo_osi_can}), a arquitetura de diagnóstico automotivo preenche
+exatamente essas lacunas. O padrão \acrshort{obd}, regido pela norma \acrshort{sae}
+J1979, ocupa o topo da pilha na Camada 7 (Aplicação), padronizando o dicionário de
+serviços de diagnóstico, os códigos de falha (\acrshort{dtc}s), os identificadores de
+parâmetros (\acrshort{pid}s) e as equações de conversão em grandezas físicas, ao passo
+que a norma ISO 15765 atua nas Camadas 3 e 4 (Rede e Transporte) como o elo de ligação
+que encapsula e segmenta as mensagens de diagnóstico \acrshort{obd} no interior dos
+quadros de enlace da rede \acrshort{can} \cite{iso15765,saej1979}.
+
+\begin{figure}[!htb]
+	\centering
+	\caption{O protocolo CAN dentro do modelo OSI}
+	\includegraphics[width=0.68\textwidth]{imagens/modelo_osi_can_farinelli.png}
+	\legend{Fonte: Adaptado de \citeonline{lugli2009} \textit{apud}
+	\citeonline{farinelli2016}.}
+	\label{fig:modelo_osi_can}
+\end{figure}
+
+\section{Aquisição de dados via OBD-II}\label{sec:aquisicao_obd2}
+
+A interação ativa com a \acrshort{ecu} para extração de telemetria em tempo real
+baseia-se no envio de Identificadores de Parâmetros (\acrshort{pid}s, do inglês
+\textit{Parameters Identification}), cujos modos de operação, códigos de serviço e
+equações de escalonamento são padronizados pela norma \acrshort{sae} J1979
+\cite{saej1979}. No Modo de Serviço \texttt{0x01} (exibição de dados
+atuais do trem de força), cada \acrshort{pid} hexadecimal referencia uma variável física
+específica, a exemplo da temperatura do líquido de arrefecimento (\acrshort{pid}
+\texttt{0x05}), rotação do motor (\acrshort{pid} \texttt{0x0C}) e velocidade do veículo
+(\acrshort{pid} \texttt{0x0D}) \cite{csselectronics2023}.
+
+Em redes regidas pela norma ISO 15765-4 (barramento \acrshort{can} de $11\text{ bits}$ a
+$500\text{ kbaud}$), o dispositivo leitor transmite um quadro de requisição utilizando o
+identificador funcional de \textit{broadcast} \texttt{0x7DF} \cite{iso15765}. A
+\acrshort{ecu} principal do motor processa a solicitação e retorna um quadro de resposta
+no identificador físico \texttt{0x7E8}, contendo os bytes brutos de medição
+($A, B, C, D$), os quais são submetidos às expressões algébricas da norma \acrshort{sae}
+J1979 para conversão nas respectivas grandezas físicas de engenharia
+\cite{sitohang2014}.
+
+\section{Microcontroladores para aplicações IoT}\label{sec:microcontroladores}
+
+A seleção da plataforma de processamento embarcado constitui uma decisão crítica no
+projeto de unidades telemétricas, exigindo equilíbrio entre determinismo de leitura do
+barramento automotivo, dimensionamento de memória, suporte nativo a pilhas
+criptográficas de rede e custo reduzido \cite{peckol2008,andrijauskas2018}.
+Diversas arquiteturas são reportadas na literatura:
+
+\begin{itemize}
+    \item \textbf{ATmega328P e Arduino UNO:} Empregados em protótipos elementares de
+        aquisição de sensores e \textit{data logging}, porém limitados pela ausência de
+        conectividade sem fio nativa, reduzida memória SRAM ($2\text{ KB}$) e ausência
+        de suporte a sistemas operacionais multitarefa para pilhas de segurança modernas
+        \cite{atmel_atmega328p,andrijauskas2018}.
+    \item \textbf{Microcontroladores PIC e ARM Cortex-M:} Utilizados historicamente em
+        interfaces dedicadas de diagnóstico automotivo (como os interpretadores baseados
+        na família PIC18 de 8 bits) e em nós de rede \acrshort{can} de 32 bits
+        \cite{microchip_pic18f4580,st_stm32f103}, mas frequentemente dependentes de
+        módulos transceptores de rádio externos para integração direta com arquiteturas
+        de nuvem.
+    \item \textbf{Raspberry Pi:} Computador de placa única
+        (\textit{Single-Board Computer}) com elevado poder computacional e suporte a
+        sistema operacional Linux, amplamente utilizado em painéis digitais locais e
+        processamento multimídia \cite{raspberrypi_datasheet}, porém com maior custo
+        energético e financeiro, além de exigir controladores \acrshort{can} externos
+        (como o circuito integrado MCP2515) via barramento SPI
+        \cite{microchip_mcp2515}.
+    \item \textbf{ESP32:} Sistema em um \textit{chip} (\textit{System-on-Chip}) de
+        núcleo duplo da Espressif Systems (ilustrado na Figura~\ref{fig:esp32}) que se
+        destaca pela conectividade \acrshort{wifi} e \textit{Bluetooth} integrada,
+        suporte a aceleração criptográfica em \textit{hardware} e presença de um
+        controlador periférico nativo compatível com a norma ISO 11898-1 denominado
+        \acrshort{twai} (\textit{Two-Wire Automotive Interface}), exigindo apenas um
+        transceptor diferencial externo de $3{,}3\text{ V}$ para acoplamento físico ao
+        barramento \acrshort{can} veicular
+        \cite{espressif_esp32_datasheet,ti_sn65hvd230}.
+\end{itemize}
+
+\begin{figure}[!htb]
+	\centering
+	\caption{Microcontrolador ESP32}
+	\includegraphics[width=0.55\textwidth]{imagens/microcontrolador_esp32_vernizzi.jpeg}
+	\legend{Fonte: Retirado de \citeonline{espressif_esp32_datasheet}.}
+	\label{fig:esp32}
+\end{figure}
+
+\section{Sistemas Operacionais de Tempo Real (RTOS) e concorrência em sistemas
+embarcados}\label{sec:rtos_concorrencia}
+
+Em sistemas embarcados automotivos nos quais a aquisição de quadros de barramento em
+alta frequência deve coexistir com operações de rede sem fio e criptografia, o modelo
+sequencial de laço único (\textit{superloop}) mostra-se inadequado devido ao forte
+acoplamento temporal entre rotinas \cite{ganssle2008,peckol2008}. Nesse modelo
+monolítico sem preempção, o tempo de ciclo torna-se variável e dependente do pior
+caminho de execução: o bloqueio de uma única rotina de entrada/saída ou de negociação de
+rede paralisa todo o processador, ocasionando perda de mensagens do veículo.
+
+Para superar as limitações do laço sequencial e compreender a arquitetura de
+escalonamento adotada neste projeto, faz-se necessário distinguir um Sistema Operacional
+de Propósito Geral (\acrshort{gpos}, do inglês
+\textit{General-Purpose Operating System}, a exemplo de distribuições Linux e Windows)
+de um Sistema Operacional de Tempo Real (\acrshort{rtos}, do inglês
+\textit{Real-Time Operating System}). Segundo \citeonline{tanenbaum2006} e
+\citeonline{peckol2008}, o escalonador de um \acrshort{gpos} é projetado para otimizar a
+vazão média de processamento (\textit{throughput}) e a repartição justa de tempo
+(\textit{fairness} ou \textit{time-sharing}) entre múltiplos processos interativos de
+usuário, admitindo variações estocásticas de latência (\textit{jitter}) na ordem de
+dezenas ou centenas de milissegundos. Em contrapartida, em um \acrshort{rtos}, a
+correção do sistema não depende apenas da exatidão lógica ou aritmética do resultado
+produzido, mas fundamentalmente do instante físico em que esse resultado é entregue em
+relação a prazos estritos (\textit{deadlines}).
+
+Os sistemas de tempo real classificam-se em rígidos (\textit{hard real-time}), nos quais
+a violação de um prazo acarreta falha crítica ou perda irreversível de amostras de um
+barramento físico, e brandos (\textit{soft real-time}), nos quais atrasos esporádicos
+provocam apenas degradação tolerável de qualidade. Para assegurar esse determinismo
+temporal, o núcleo (\textit{kernel}) de um \acrshort{rtos} implementa escalonamento
+preemptivo baseado em prioridades fixas, garantindo que uma tarefa crítica desbloqueada
+por um evento externo assuma imediatamente a unidade central de processamento em
+detrimento de tarefas de menor prioridade, mantendo o tempo de troca de contexto
+(\textit{context switch}) e a latência de interrupção estritamente limitados e
+previsíveis \cite{ganssle2008,espressif2026}.
+
+Todavia, a execução concorrente de múltiplas tarefas que compartilham recursos de
+memória introduz o problema clássico do entrelaçamento não determinístico de instruções
+(\textit{interleaving}) dentro de regiões críticas (\textit{critical sections}).
+Conforme formalizado por \citeonline{benari2006}, a ausência de sincronização rigorosa
+no acesso a variáveis compartilhadas resulta em condições de corrida
+(\textit{race conditions}) e leituras inconsistentes (\textit{dirty reads}), ao passo
+que o gerenciamento inadequado de bloqueios pode induzir anomalias severas de
+escalonamento, tais como a inanição de tarefas de menor prioridade
+(\textit{starvation}), o impasse circular (\textit{deadlock}) e a inversão de prioridade
+(\textit{priority inversion}) \cite{tanenbaum2006}. A engenharia de \textit{firmware}
+sob um \acrshort{rtos} exige, portanto, o uso disciplinado de primitivas formais de
+exclusão mútua e comunicação intertarefas providas pelo \textit{kernel}.
+
+\subsection{O \textit{framework} de desenvolvimento oficial ESP-IDF}\label{sec:espidf}
+
+O \acrshort{espidf} (\textit{Espressif IoT Development Framework}) constitui o ambiente
+oficial de desenvolvimento de \textit{software} em nível industrial mantido pela
+Espressif Systems para a família de processadores ESP32 \cite{espressif2026}. Ao
+contrário de plataformas de prototipagem rápida como o \textit{Arduino Core}, que
+encapsulam a execução sob uma abstração cooperativa simplificada (\texttt{setup()} e
+\texttt{loop()}) e ocultam o controle fino sobre registradores e interrupções, o
+\acrshort{espidf} fornece acesso determinístico em linguagem C nativa à Camada de
+Abstração de \textit{Hardware} (\acrshort{hal}, do inglês
+\textit{Hardware Abstraction Layer}), aos periféricos de silício (como o controlador
+automotivo \acrshort{twai} e os aceleradores criptográficos de \textit{hardware}) e às
+pilhas de rede e segurança integradas, incluindo o protocolo TCP/IP leve
+(\textit{LwIP}), a biblioteca criptográfica \textit{mbedTLS} e o cliente nativo
+\texttt{esp-mqtt}.
+
+Na engenharia de \textit{firmware}, o \acrshort{espidf} substitui arquivos de compilação
+monolíticos por um sistema de meta-construção baseado em \textit{CMake} e no motor
+\textit{Ninja}, parametrizado estaticamente em tempo de compilação via árvore
+\textit{Kconfig} (\texttt{sdkconfig}). Essa infraestrutura viabiliza a adoção direta de
+uma Arquitetura Baseada em Componentes (\acrshort{cba}, formalizada pela norma
+ISO/IEC/IEEE 42010), na qual cada subsistema de \textit{software} é isolado em um
+diretório autocontido, compilado pela cadeia de ferramentas cruzada
+(\texttt{xtensa-esp32-elf-gcc}) como uma biblioteca estática independente
+(\texttt{lib*.a}) e registrado com interfaces públicas explícitas
+(\texttt{INCLUDE\_DIRS}) e grafos estritos de dependência (\texttt{REQUIRES})
+\cite{iso42010}. Aliada às diretrizes de confiabilidade do padrão automotivo MISRA
+C:2012 e do guia de codificação embarcada de \citeonline{barr2008}, essa estrutura
+modular permite ainda embutir artefatos criptográficos diretamente na memória
+\textit{Flash} durante a etapa de ligação (\textit{link-time embedding} via diretiva
+\texttt{EMBED\_TXTFILES}), assegurando baixo acoplamento, rastreabilidade e segurança
+operacional sem dependência de sistemas de arquivos externos.
+
+\subsection{Integração arquitetural entre o ESP-IDF e o \textit{kernel}
+FreeRTOS}\label{sec:integracao_freertos}
+
+Diferentemente de microcontroladores convencionais nos quais um sistema operacional de
+tempo real é adicionado opcionalmente como biblioteca externa sobre um código
+\textit{bare-metal}, no ecossistema \acrshort{espidf} o \textit{kernel} FreeRTOS
+constitui a fundação operacional nativa e indissociável do próprio \textit{framework}
+\cite{espressif2026}. Enquanto a distribuição original do FreeRTOS foi concebida para
+processadores de núcleo único, a Espressif implementou no \acrshort{espidf} uma extensão
+arquitetural de Multiprocessamento Simétrico (\acrshort{smp}, do inglês
+\textit{Symmetric Multiprocessing}), capaz de escalonar tarefas simultaneamente através
+dos dois núcleos físicos de $32\text{ bits}$ Tensilica Xtensa LX6 do ESP32: o núcleo de
+protocolo (\texttt{PRO\_CPU}, \textit{Core 0}), dedicado prioritariamente às tarefas
+internas de rádio \acrshort{wifi}, pilha TCP/IP e eventos de sistema, e o núcleo de
+aplicação (\texttt{APP\_CPU}, \textit{Core 1}), disponível para a execução paralela das
+tarefas de usuário sob uma cadência de relógio de sistema (\textit{system tick}) de
+$1000\text{ Hz}$ (fatias temporais determinísticas de $1\text{ ms}$). Durante a
+inicialização do chip, o próprio código de partida do \acrshort{espidf} instancia os
+serviços de base do \textit{kernel} (como o despachante de eventos \texttt{esp\_event} e
+o serviço de temporizadores \texttt{Tmr Svc}) e lança a função de entrada
+\texttt{app\_main()} já como uma tarefa nativa do FreeRTOS, a partir da qual os módulos
+da aplicação criam suas próprias tarefas trabalhadoras com afinidade de núcleo definida
+ou balanceada.
+
+Essa simbiose profunda manifesta-se no acoplamento direto entre os \textit{drivers} de
+periféricos do \acrshort{espidf} e as primitivas formais de sincronização e comunicação
+intertarefas do FreeRTOS:
+\begin{itemize}
+    \item \textbf{Filas orientadas a interrupção (\textit{ISR-safe Queues}) nos
+        \textit{drivers} de barramento:} Em consonância com os princípios de projeto de
+        sistemas embarcados que preconizam rotinas de interrupção mínimas e velozes
+        \cite{ganssle2008}, os \textit{drivers} nativos do \acrshort{espidf}, a exemplo
+        do controlador automotivo \acrshort{twai}, operam sem espera ocupada
+        (\textit{polling}). Quando um quadro \acrshort{can} é recebido no barramento, a
+        rotina de serviço de interrupção (\acrshort{isr}) do \textit{driver} transfere o
+        pacote diretamente para uma fila interna do FreeRTOS
+        (\texttt{xQueueSendFromISR}) sob o modelo produtor-consumidor limitado
+        (\textit{bounded buffer}) \cite{benari2006} e solicita ao escalonador o
+        desbloqueio imediato da tarefa de recepção, garantindo latência mínima de
+        resposta sem consumir ciclos de CPU em períodos de ociosidade.
+    \item \textbf{Temporizadores de \textit{software} (\textit{Software Timers}) não
+        bloqueantes:} A integração do serviço de temporizadores do FreeRTOS ao
+        \acrshort{espidf} permite substituir atrasos bloqueantes (\texttt{vTaskDelay})
+        por funções de retorno (\textit{callbacks}) assíncronas em segundo plano,
+        evitando a inanição de processamento (\textit{starvation}) e prevenindo o
+        transbordamento (\textit{overflow}) das filas de recepção \acrshort{twai}
+        durante rajadas intensas de tráfego veicular \cite{ganssle2008,espressif2026}.
+    \item \textbf{Grupos de eventos (\textit{Event Groups}) e semáforos de exclusão
+        mútua (\textit{Mutex}):} A malha de eventos assíncronos do \acrshort{espidf}
+        (responsável pelas transições de estado da conexão \acrshort{wifi} e concessão
+        de endereço IP via DHCP) sincroniza-se deterministicamente com as tarefas de
+        aplicação por meio de barreiras baseadas em \textit{Event Groups} do FreeRTOS.
+        Simultaneamente, o compartilhamento de estruturas de telemetria em memória RAM
+        entre as tarefas concorrentes do barramento \acrshort{can} e do cliente
+        \acrshort{mqtts} é protegido por semáforos do tipo \textit{Mutex} dotados de
+        mecanismo de herança de prioridade (\textit{priority inheritance}), assegurando
+        a propriedade formal de exclusão mútua na seção crítica e erradicando condições
+        de corrida (\textit{race conditions}), leituras corrompidas (\textit{dirty
+        reads}) e inversões de prioridade \cite{benari2006,espressif2026}.
+\end{itemize}
+
+\section{Protocolo MQTT e segurança na camada de transporte (TLS) para
+IoT}\label{sec:mqtt_tls}
+
+A integração de dispositivos embarcados veiculares a plataformas de nuvem segue a cadeia
+funcional típica de sistemas de \acrshort{iot}, compreendendo a coleta em sensores e
+barramentos de borda, a transmissão por enlaces de comunicação sem fio, o processamento
+e armazenamento em servidores remotos e a apresentação em interfaces de usuário,
+conforme esquematizado na Figura~\ref{fig:sistema_iot} \cite{andrijauskas2018}. Contudo,
+a transmissão contínua de séries temporais entre veículos em movimento e servidores em
+nuvem impõe desafios severos relacionados à instabilidade de enlaces móveis, restrição
+de largura de banda e segurança cibernética. Nesse contexto, o protocolo \acrshort{mqtt}
+(\textit{Message Queuing Telemetry Transport}), padronizado pela organização OASIS e
+pela norma ISO/IEC 20922, estabelece um modelo de mensageria leve fundamentado no
+paradigma publicador/subscritor (\textit{publish/subscribe}) intermediado por um
+servidor central (\textit{broker}) \cite{oasis2014}.
+
+\begin{figure}[!htb]
+	\centering
+	\caption{Arquitetura funcional em blocos de um sistema de Internet das Coisas (IoT)}
+	\includegraphics[width=0.78\textwidth]{imagens/sistema iot.jpg}
+	\legend{Fonte: Adaptado de \citeonline{andrijauskas2018}.}
+	\label{fig:sistema_iot}
+\end{figure}
+
+Diferentemente do protocolo \acrshort{http} tradicional, cuja semântica de requisição e
+resposta síncrona cliente-servidor na camada de aplicação exige cabeçalhos textuais
+extensos e repetidas negociações de conexão sobre o protocolo TCP \cite{kurose2010}, o
+\acrshort{mqtt} opera sobre conexões TCP persistentes com cabeçalho fixo mínimo de
+apenas $2\text{ bytes}$, promovendo o desacoplamento espacial, temporal e de
+sincronização entre a unidade telemétrica embarcada (publicadora) e o serviço de
+ingestão em nuvem (subscritor) \cite{iso20922}. A organização hierárquica em árvores de
+tópicos possibilita ainda que o servidor de aplicação utilize caracteres coringa
+(\textit{wildcards}, como o operador de nível único \texttt{+}) exclusivamente na
+operação de subscrição para agregar o fluxo de múltiplos veículos de forma escalável.
+
+\subsection{Vulnerabilidades do MQTT em texto claro e a adoção do MQTTS sobre
+TLS}\label{sec:vulnerabilidades_mqtt}
+
+Sob a ótica dos fundamentos de Segurança da Informação regidos pelas normas ISO/IEC
+27001 e ISO/IEC 27002, a proteção de qualquer arquitetura de comunicação distribuída
+estrutura-se sobre a preservação da tríade de Confidencialidade, Integridade e
+Disponibilidade, somada à autenticidade das partes comunicantes \cite{baars2018}. No
+contexto específico da Internet das Coisas aplicada a veículos conectados,
+\citeonline{iqbal2019} ressaltam que a transmissão de dados telemétricos exige garantias
+estritas de que as leituras provenham de uma fonte autêntica e íntegra, empregando
+protocolos de comunicação dotados de mecanismos robustos contra o vazamento de
+informações e tentativas de invasão ao longo de enlaces sem fio móveis (\acrshort{wifi}
+e redes celulares 4G/LTE).
+
+Embora o protocolo \acrshort{mqtt} padrão (operando na porta TCP 1883) apresente elevada
+eficiência de transporte, sua especificação base não incorpora cifragem nativa na camada
+de aplicação, trafegando credenciais de conexão, nomes de tópicos e cargas úteis
+\acrshort{json} inteiramente em texto claro (\textit{plaintext}) \cite{oasis2014}. A
+transmissão não criptografada em redes sem fio abertas ou compartilhadas expõe a
+telemetria veicular a dois vetores clássicos de ameaça:
+
+\begin{itemize}
+    \item \textbf{Escuta clandestina ou interceptação passiva (\textit{Eavesdropping}):}
+        Consiste na captura e inspeção não autorizada de pacotes de dados que transitam
+        por um canal de comunicação por meio de analisadores de protocolo ou farejadores
+        de rede (\textit{packet sniffers}) \cite{kurose2010,eleuterio2011}. Como o
+        \acrshort{mqtt} puro transmite os segmentos TCP sem proteção criptográfica, um
+        agente malicioso posicionado no mesmo enlace sem fio ou nos roteadores
+        intermediários consegue reconstruir integralmente o conteúdo das mensagens
+        \acrshort{json}, extraindo padrões operacionais do veículo e metadados da árvore
+        de tópicos sem deixar rastros de modificação no fluxo de rede, o que viola
+        diretamente o princípio da confidencialidade.
+    \item \textbf{Ataque de intermediário (\textit{Man-in-the-Middle} ---
+        \acrshort{mitm}):} Caracteriza um ataque ativo de rede no qual o invasor se
+        interpõe secretamente no canal de comunicação entre o dispositivo embarcado
+        (cliente) e o servidor (\textit{broker}), personificando cada extremidade
+        legítima perante a outra \cite{baars2018,tanenbaum2011}. Diferentemente da
+        escuta passiva, o atacante em posição de \acrshort{mitm} detém a capacidade de
+        interceptar, descartar, reter ou adulterar ativamente os pacotes telemétricos em
+        trânsito (por exemplo, injetando leituras falsas de rotação ou mascarando um
+        superaquecimento crítico do motor), além de poder redirecionar a unidade
+        embarcada para um servidor fraudulento (\textit{server spoofing}),
+        comprometendo simultaneamente a confidencialidade, a integridade dos dados e a
+        autenticidade da origem.
+\end{itemize}
+
+Para neutralizar esses vetores de ataque em conformidade com o paradigma de arquitetura
+\textit{Zero Trust} (formalizado pelo NIST SP 800-207, segundo o qual nenhum enlace de
+rede externa deve ser considerado implicitamente confiável) \cite{rose2020},
+substitui-se o transporte em texto claro pelo encapsulamento da sessão \acrshort{mqtt}
+sobre o protocolo criptográfico \acrshort{tls} (\textit{Transport Layer Security},
+especificado pela RFC 5246), instituindo o padrão seguro \acrshort{mqtts} na porta 8883
+\cite{dierks2008}. Durante o aperto de mão (\textit{handshake}) criptográfico do
+\acrshort{tls}, o microcontrolador valida matematicamente a assinatura digital do
+certificado X.509 apresentado pelo \textit{broker} perante a Autoridade Certificadora
+(\texttt{CA}) raiz confiável gravada em sua memória \textit{Flash}, impedindo a
+personificação de servidor típica de ataques \acrshort{mitm}. Em seguida,
+estabelecem-se chaves de sessão simétricas efêmeras que cifram todo o fluxo de pacotes
+(neutralizando o \textit{eavesdropping}) e anexam Códigos de Autenticação de Mensagem
+(MAC) a cada registro transmitido, garantindo que qualquer tentativa de adulteração de
+bytes em trânsito seja imediatamente detectada e descartada antes de atingir a camada de
+persistência em nuvem.
+
+\section{Mineração de dados (CRISP-DM) e detecção de anomalias via aprendizado de
+máquina}\label{sec:crispdm_iforest}
+
+A transformação de dados telemétricos brutos em diagnósticos preditivos requer uma
+metodologia sistemática de ciência de dados. O modelo de referência \acrshort{crispdm}
+(\textit{Cross-Industry Standard Process for Data Mining}), proposto por
+\citeonline{wirth2000}, estrutura o ciclo de vida analítico em seis fases iterativas:
+(i) Compreensão do Negócio (\textit{Business Understanding}), na qual se definem os
+requisitos operacionais e os limites termomecânicos do motor; (ii) Compreensão dos Dados
+(\textit{Data Understanding}), voltada à análise exploratória das séries temporais
+coletadas; (iii) Preparação dos Dados (\textit{Data Preparation}), abrangendo limpeza,
+tratamento de valores ausentes e engenharia de atributos; (iv) Modelagem
+(\textit{Modeling}), etapa de estruturação dos algoritmos de aprendizado de máquina; (v)
+Avaliação (\textit{Evaluation}), na qual se verifica a coerência física e estatística
+das predições; e (vi) Implantação (\textit{Deployment}), integrando o modelo ao sistema
+de monitoramento.
+
+No domínio automotivo real, a obtenção de conjuntos de dados balanceados contendo falhas
+mecânicas severas previamente rotuladas é inviável sem submeter o veículo a condições
+destrutivas. Por essa razão, técnicas de aprendizado não supervisionado mostram-se
+particularmente adequadas para a detecção de anomalias (\textit{outlier detection}).
+Destaca-se nesse escopo o algoritmo \textit{Isolation Forest}, introduzido por
+\citeonline{liu2008}, o qual identifica observações anômalas pelo princípio do
+isolamento estocástico em vez de depender de métricas computacionalmente custosas de
+distância ou densidade \cite{geron2022}.
+
+O algoritmo \textit{Isolation Forest} constrói um conjunto (\textit{ensemble}) de
+árvores binárias de isolamento (\textit{iTrees}) particionando recursivamente e de forma
+aleatória o espaço de atributos (como pares de rotação em \acrshort{rpm}, velocidade e
+temperatura do arrefecimento). Como pontos anômalos situam-se em regiões esparsas da
+distribuição multivariada, eles exigem um número significativamente menor de partições
+aleatórias para serem isolados nos nós folhas, resultando em comprimentos médios de
+caminho (\textit{path lengths}) mais curtos desde a raiz da árvore \cite{liu2008}. Dessa
+forma, o modelo fornece uma base matemática eficiente para detectar precocemente desvios
+térmicos ou cinemáticos atípicos no funcionamento do motor com complexidade temporal
+linear e baixo consumo de memória.
+
+\chapter{Revisão da Literatura}
+
+A literatura sobre diagnóstico e monitoramento veicular via porta \acrshort{obd}
+apresenta diversas abordagens que variam em \textit{hardware}, \textit{software},
+arquitetura de comunicação e objetivos analíticos. Esta revisão analisa um conjunto de
+trabalhos correlatos para contextualizar e destacar as contribuições do presente
+projeto. A análise está organizada por eixos temáticos, comparando as soluções
+existentes com a arquitetura proposta neste trabalho quanto à concepção do dispositivo
+de aquisição embarcado, plataformas de processamento e comunicação em nuvem, finalidade
+analítica e escalabilidade de protocolos.
+
+\section{\textit{Hardware}: \textit{scanners} comerciais e soluções customizadas}
+
+A análise da literatura revela duas estratégias principais para a aquisição de dados da
+rede veicular: o emprego de adaptadores diagnósticos comerciais prontos ou o
+desenvolvimento de \textit{hardware} embarcado dedicado.
+
+A primeira abordagem, focada na conveniência de integração, apoia-se em interfaces
+comerciais fechadas. \citeonline{junior2009} exemplifica essa estratégia ao empregar um
+cabo comercial VAG-COM para estabelecer comunicação com a \acrshort{ecu} de um veículo
+Volkswagen Gol sob o protocolo proprietário KW1281. De maneira análoga,
+\citeonline{andria2016}, no desenvolvimento de uma plataforma de aquisição veicular em
+Bari, na Itália, e \citeonline{marques2019}, na construção do sistema
+\textit{Vehicle-Manager}, utilizaram adaptadores comerciais baseados no circuito
+integrado ELM327 com comunicação \textit{Bluetooth}. Revisões conduzidas por
+\citeonline{manalu2017} e \citeonline{moniaga2018} também avaliaram diferentes
+adaptadores comerciais \acrshort{obd} (\textit{iSaddle}, \textit{ERUSUN} e
+\textit{iOBD2}) acoplados a computadores de placa única. Embora reduzam o tempo inicial
+de prototipagem, tais dispositivos operam como ``caixas-pretas'' que traduzem comandos
+seriais com latência adicional, restringindo o desenvolvedor às taxas de amostragem e
+aos conjuntos de parâmetros impostos pelo fabricante do adaptador.
+
+Em contrapartida, a segunda abordagem prioriza o controle sobre as camadas física e de
+enlace por meio do projeto de \textit{hardware} customizado conectado diretamente ao
+barramento \acrshort{can}. Nessa vertente, \citeonline{farinelli2016} projetou um
+sistema embarcado de bordo dedicado à leitura direta de parâmetros de diagnóstico na
+rede \acrshort{can}, detalhando o tratamento de quadros e a decodificação local de
+\acrshort{pid}s. \citeonline{yu2024} desenvolveu um \textit{datalogger} automotivo
+utilizando um computador de placa única Raspberry Pi acoplado via barramento SPI ao
+controlador e transceptor \acrshort{can} MCP2515, provendo coleta e visualização em
+tempo real por meio de uma Interface Humano-Computador (\acrshort{ihc}) local. Por sua
+vez, \citeonline{vernizzi2024} implementou uma unidade de aquisição baseada no
+microcontrolador ESP32 acoplado a um transceptor \acrshort{can} dedicado para leitura
+direta da rede veicular, combinando transmissão sem fio via \acrshort{wifi} e
+armazenamento redundante (\textit{backup}) em cartão de memória \acrshort{sd}.
+
+Nesse contexto, o presente trabalho alinha-se à segunda vertente ao utilizar o
+microcontrolador ESP32 integrado diretamente a um transceptor diferencial \acrshort{can}
+de $3{,}3\text{ V}$ operando sobre o controlador periférico nativo \acrshort{twai}. Essa
+decisão de engenharia elimina a dependência de adaptadores intermediários baseados em
+ELM327 \cite{elmelectronics_elm327} e garante controle determinístico em tempo real
+sobre a temporização das requisições \acrshort{sae} J1979 e a filtragem de interrupções
+do barramento.
+
+\section{Plataformas de \textit{software} e de comunicação}
+
+A arquitetura de processamento, transporte e persistência dos dados coletados também
+apresenta forte evolução na literatura. Diversas soluções concentram o processamento
+exclusivamente no interior do veículo: o sistema de \citeonline{junior2009} exigia um
+computador portátil (\textit{notebook}) executando \textit{software} em C\# como
+intermediário obrigatório para ler a interface VAG-COM e retransmitir os dados via
+\textit{Bluetooth}. Projetos mais recentes de computadores de bordo e painéis digitais,
+como os desenvolvidos por \citeonline{cowfish2014}, \citeonline{wacker2017} (sistema
+\textit{M3 Pi} com tela sensível ao toque e registro local em arquivos CSV) e
+\citeonline{shinde2024} (painel digital em Python/PyQt5 sobre Raspberry Pi), eliminaram
+o computador portátil, mas mantiveram os dados confinados ao dispositivo de visualização
+local no painel do veículo.
+
+Buscando superar o isolamento local, \citeonline{andria2016} implementaram em um
+Raspberry Pi embarcado um banco de dados relacional MySQL local que armazena as séries
+temporais durante o trajeto e realiza a sincronização remota via \acrshort{wifi} quando
+o veículo retorna à garagem. Já \citeonline{marques2019} utilizou um aplicativo móvel
+Android conectado via \textit{Bluetooth} ao veículo como ponte de transmissão para uma
+interface \textit{web} centralizada. Reconhecendo a necessidade de conectividade
+heterogênea diretamente a partir do conector diagnóstico, \citeonline{baek2015}
+projetaram um conector \acrshort{obd} integrado baseado no microcontrolador ARM
+Cortex-M3 (\texttt{STM32F103ZET6}) dotado simultaneamente de interfaces
+\textit{Bluetooth}, \acrshort{wifi} e rede celular 3G WCDMA para transmissão direta a
+dispositivos externos.
+
+Mais recentemente, arquiteturas orientadas à \acrshort{iot} passaram a adotar protocolos
+de mensageria assíncrona. \citeonline{oliveira2022} desenvolveu um sistema embarcado
+combinando o microcontrolador ESP32 e a plataforma BeagleBone Black para transmitir
+telemetria veicular em tempo real via protocolo \acrshort{mqtt} sobre rede celular
+móvel, persistindo os registros em um banco de dados não relacional RavenDB na nuvem.
+Avançando sobre essa abordagem, o presente trabalho elimina a necessidade de um segundo
+computador embarcado intermediário (como a BeagleBone Black ou o Raspberry Pi) ao
+executar toda a pilha criptográfica \acrshort{mqtts} (\acrshort{tls} v1.2) diretamente
+no microcontrolador ESP32 sob o \textit{kernel} FreeRTOS, acoplando-o a um
+\textit{backend} assíncrono com validação estrita de contratos e persistência relacional
+transacional \acrshort{acid}.
+
+\section{Finalidade da aplicação e profundidade da análise}
+
+Os objetivos analíticos das plataformas reportadas na literatura podem ser classificados
+em três níveis: monitoramento descritivo, diagnóstico reativo e análise comportamental
+ou preditiva.
+
+No nível reativo e descritivo, \citeonline{singh2021} propuseram um sistema de
+diagnóstico baseado em \acrshort{iot} utilizando Raspberry Pi (biblioteca
+\textit{pyOBD}), servidor em Node.js e banco de dados não relacional MongoDB com foco na
+leitura e interpretação de códigos de falha (\acrshort{dtc}s) e envio de notificações de
+manutenção ao usuário. No âmbito de gestão de frotas, \citeonline{marques2019}
+direcionou sua plataforma ao acompanhamento histórico de quilometragem, temperatura e
+alertas preventivos parametrizados.
+
+Avançando para a análise cinemática, \citeonline{andria2016} integraram aos dados de
+rotação e velocidade do \acrshort{obd} uma Unidade de Medição Inercial (\acrshort{imu}
+MPU-6050 via barramento I2C) e um receptor GPS para avaliar o comportamento do motorista
+durante as trocas de marcha por meio da razão instantânea velocidade/\acrshort{rpm},
+classificando o estilo de condução visando à segurança e à economia de combustível. De
+forma complementar, \citeonline{oliveira2022} utilizou leituras de acelerometria e
+velocidade para a detecção determinística de eventos de frenagem brusca.
+
+Posicionando-se além da leitura reativa de códigos \acrshort{dtc} \cite{singh2021} ou da
+aplicação de limiares estáticos sobre grandezas isoladas
+\cite{marques2019,oliveira2022}, a arquitetura proposta neste trabalho estrutura a
+consolidação de séries temporais multivariadas do motor (rotação, velocidade e
+temperatura do líquido de arrefecimento) para habilitar uma camada analítica superior: a
+modelagem de detecção não supervisionada de anomalias baseada em aprendizado de máquina
+(\textit{Isolation Forest}) sob a metodologia \acrshort{crispdm}, visando identificar
+padrões sutis de degradação termomecânica antes que um código de defeito seja disparado
+pela \acrshort{ecu}.
+
+\section{Escalabilidade e flexibilidade de protocolos}
+
+A escalabilidade de sistemas de telemetria automotiva depende diretamente do grau de
+desacoplamento entre o \textit{hardware} de borda e a infraestrutura de nuvem. Soluções
+fortemente acopladas a protocolos legados proprietários, como a implementação de
+\citeonline{junior2009} restrita ao padrão KW1281, apresentam baixa portabilidade entre
+diferentes fabricantes e modelos de veículos.
+
+Na arquitetura desenvolvida neste trabalho, a escalabilidade é assegurada em múltiplas
+camadas. Na borda, a adoção do padrão internacional ISO 15765-4 (\acrshort{can} a
+$500\text{ kbaud}$) e a estruturação do \textit{firmware} em C sob Arquitetura Baseada
+em Componentes (\acrshort{cba}) permitem que novos identificadores \acrshort{pid} da
+norma \acrshort{sae} J1979 sejam incorporados sem impactar os módulos de conectividade e
+segurança. Na nuvem, o modelo publicador/subscritor do protocolo \acrshort{mqtts} com
+subscrição via caractere coringa (\textit{wildcard}) permite que um único serviço de
+ingestão processe simultaneamente o fluxo telemétrico de múltiplos veículos
+(\textit{multi-tenant}), garantindo flexibilidade para a evolução contínua dos modelos
+analíticos.
+
+\section{Considerações finais do capítulo}
+
+A partir da análise comparativa da literatura, constata-se que o presente trabalho se
+diferencia por integrar quatro eixos complementares em uma arquitetura coesa: (i)
+aquisição embarcada nativa em barramento \acrshort{can} via periférico \acrshort{twai}
+do ESP32 sob \acrshort{rtos}, superando as limitações de adaptadores comerciais baseados
+em ELM327 \cite{andria2016,marques2019}; (ii) transmissão direta da borda para a nuvem
+sob canal criptografado \acrshort{mqtts}/\acrshort{tls}, dispensando computadores
+intermediários no interior do veículo \cite{junior2009,oliveira2022}; (iii) ingestão
+assíncrona com validação formal de contratos e persistência relacional \acrshort{acid}
+aliada à visualização em tempo real; e (iv) modelagem analítica voltada à detecção não
+supervisionada de anomalias operacionais, avançando em relação às abordagens puramente
+descritivas ou reativas \cite{singh2021,yu2024}.
+
+\chapter{Metodologia}
+
+Para materializar os objetivos específicos traçados no Capítulo 1 e aplicar os
+fundamentos teóricos discutidos no Capítulo 2 sobre as lacunas identificadas no Capítulo
+3, este capítulo descreve as decisões de projeto e os procedimentos metodológicos
+adotados na construção e validação da plataforma de telemetria automotiva inteligente. A
+exposição organiza-se em seis frentes sequenciais e interdependentes: (i) evolução de
+escopo, especificação de materiais e arquitetura geral do sistema; (ii) organização
+modular do repositório de código-fonte no GitHub; (iii) engenharia de \textit{firmware}
+embarcado em tempo real; (iv) engenharia de \textit{backend}, segurança cibernética e
+persistência transacional; (v) emulação sintética veicular, visualização em tempo real e
+modelagem matemática da camada de detecção de anomalias; e (vi) protocolo metodológico
+de verificação de lacunas e revisão com apoio instrumental de Inteligência Artificial
+Generativa (\acrshort{iag}).
+
+\section{Evolução de escopo, materiais e visão geral da arquitetura}
+
+Na concepção preliminar do projeto elaborada durante o projeto, o estudo de
+caso previa a utilização de um veículo Volkswagen Polo Classic 2000, cuja interface
+diagnóstica baseava-se no protocolo serial assíncrono legado \textit{K-Line}, regido
+pela norma ISO 9141-2 a uma taxa de transmissão de $10{,}4\text{ kbaud}$ no pino 7 do
+conector \acrshort{obd}, exigindo rotina temporizada de inicialização
+(\textit{5-Baud Init}) e condicionamento de nível lógico por meio do transceptor
+monolítico L9637D \cite{l9637d_datasheet}. Contudo, no início da execução experimental
+do \acrshort{tcc} II, promoveu-se a evolução tecnológica do escopo para um veículo
+contemporâneo, o Volkswagen Polo Track, equipado com barramento diferencial
+\acrshort{can} operando a $500\text{ kbaud}$ sob a norma ISO 15765-4 \cite{iso15765}.
+
+Em consonância com a convergência normativa e o ganho nominal de $48$ vezes em largura
+de banda fundamentados na Seção~\ref{sec:convergencia_osi}, essa decisão de engenharia
+eliminou os atrasos de sincronização inicial e assegurou aplicabilidade direta da
+plataforma à frota automotiva moderna. Adicionalmente, a migração para o barramento
+\acrshort{can} permitiu explorar a integração física direta com o controlador periférico
+\acrshort{twai} presente no silício do microcontrolador ESP32, conforme caracterizado na
+Seção~\ref{sec:microcontroladores} \cite{espressif_esp32_datasheet}. Sob essa
+especificação, a arquitetura do sistema foi particionada em três subsistemas
+desacoplados:
+
+Sob essa nova especificação, a arquitetura do sistema foi projetada segundo os
+princípios de engenharia de sistemas desacoplados, particionando o fluxo de
+processamento desde a borda veicular até a nuvem em três subsistemas interdependentes:
+
+\begin{itemize}
+    \item \textbf{Subsistema de Borda Automotiva (\textit{Edge}):} Composto pela placa
+        de desenvolvimento ESP32 DevKit V1 (equipada com o módulo ESP32-WROOM-32
+        descrito
+        na Seção~\ref{sec:microcontroladores}) acoplada ao transceptor diferencial
+        \acrshort{can} SN65HVD230 da Texas Instruments \cite{ti_sn65hvd230}. A seleção
+        do
+        circuito integrado (\acrshort{ci}) SN65HVD230 justifica-se por sua operação
+        nativa em tensão lógica de $3{,}3\text{ V}$, diretamente compatível com os pinos
+        de entrada e saída de propósito geral (\acrshort{gpio}) do ESP32 sem a
+        necessidade de conversores bidirecionais de nível lógico exigidos por
+        transceptores convencionais de $5\text{ V}$. A alimentação elétrica do conjunto
+        é
+        derivada da linha automotiva de $12\text{ V}$ contínua (pino 16 do conector
+        diagnóstico \acrshort{sae} J1962), regulada para $5\text{ V}$ no barramento de
+        entrada da placa e compartilhando referência de terra comum (\texttt{GND}) com
+        os pinos 4 e 5 do conector veicular.
+    \item \textbf{Subsistema de Transporte Seguro e Ingestão em Nuvem (\textit{Cloud
+        Backend}):} A unidade embarcada estabelece conectividade sem fio via enlace
+        \acrshort{wifi} IEEE 802.11 b/g/n roteado por ponto de acesso móvel veicular
+        4G/LTE, transmitindo cargas úteis em formato \acrshort{json} sobre o protocolo
+        \acrshort{mqtts} (\acrshort{tls} v1.2 na porta 8883) para o \textit{broker}
+        Eclipse Mosquitto. Na camada de servidor, um serviço de aplicação assíncrono
+        desenvolvido em Python 3.12 sobre o \textit{framework} FastAPI e a biblioteca
+        Eclipse Paho-MQTT executa a validação sintática e semântica de fronteira via
+        Pydantic v2 e realiza a persistência relacional transacional em banco de dados
+        SQLite, mediada pelo mapeamento objeto-relacional (\acrshort{orm}) SQLAlchemy
+        2.0.
+    \item \textbf{Subsistema de Visualização e Modelagem Preditiva:} Constituído pelo
+        \textit{dashboard} analítico interativo desenvolvido em Streamlit, apoiado pelo
+        emulador sintético de dinâmica veicular para ensaios de estresse e pela
+        especificação arquitetural e modelagem matemática do \textit{pipeline} de
+        detecção não supervisionada de anomalias estruturado sob a metodologia
+        \acrshort{crispdm} e o algoritmo \textit{Isolation Forest}.
+\end{itemize}
+
+A topologia geral de acoplamento físico entre o barramento diferencial veicular
+(\texttt{CAN\_H} e \texttt{CAN\_L}), o transceptor \acrshort{can} externo e as linhas
+lógicas de transmissão (\texttt{CAN\_TX}) e recepção (\texttt{CAN\_RX}) roteadas pelos
+pinos \acrshort{gpio} e barramentos de alimentação (\texttt{3V3}, \texttt{5V0} e
+\texttt{GND}) do módulo ESP32-WROOM é ilustrada na Figura~\ref{fig:circuito_esp32}.
+Complementarmente, o mapeamento elétrico definitivo adotado na implementação do
+protótipo, incluindo a atribuição exata dos pinos \texttt{GPIO 4} e \texttt{GPIO 5}
+para o controlador \acrshort{twai} e dos pinos de diagnóstico luminoso, encontra-se
+consolidado no Quadro~\ref{quad:pinout}.
+
+\begin{figure}[!htb]
+	\centering
+	\caption{Topologia de interfaceamento entre o barramento diferencial CAN, o transceptor
+	externo e o microcontrolador ESP32}
+	\includegraphics[width=0.78\textwidth]{imagens/circuito esp32.png}
+	\legend{Fonte: Elaborado pelo autor (2026).}
+	\label{fig:circuito_esp32}
+\end{figure}
+
+\begin{table}[!htb]
+\centering
+\refstepcounter{quadro}\label{quad:pinout}
+{\footnotesize
+\textbf{Quadro \thequadro{} -- Mapeamento elétrico de pinos entre o conector
+\acrshort{obd} (\acrshort{sae} J1962), o transceptor SN65HVD230 e o microcontrolador
+ESP32}\par}
+\vspace{4pt}
+{\footnotesize
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.1cm}|l|>{\raggedright\arraybackslash}p{8.6cm}|}
+\hline
+\textbf{Pino / Barramento} & \textbf{Direção / Tipo}
+    & \textbf{Função no Sistema e Conexão Física} \\ \hline
+\texttt{GPIO 4} (\texttt{D4}) & Saída (\texttt{TX})
+    & Linha de transmissão lógica \acrshort{twai}/\acrshort{can} conectada ao pino
+    \texttt{CTX} (\texttt{TXD}) do transceptor SN65HVD230. \\ \hline
+\texttt{GPIO 5} (\texttt{D5}) & Entrada (\texttt{RX})
+    & Linha de recepção lógica \acrshort{twai}/\acrshort{can} conectada ao pino
+    \texttt{CRX} (\texttt{RXD}) do transceptor SN65HVD230. \\ \hline
+\texttt{GPIO 13} (\texttt{D13}) & Saída Digital
+    & Indicador luminoso (LED) de sistema energizado e controlador \acrshort{twai}
+    inicializado. \\ \hline
+\texttt{GPIO 14} (\texttt{D14}) & Saída Digital
+    & Indicador luminoso (LED) de tráfego \acrshort{can} válido recebido da
+    \acrshort{ecu} (\texttt{0x7E8}). \\ \hline
+\texttt{GPIO 26} (\texttt{D26}) & Saída Digital
+    & Indicador luminoso (LED) de pacote telemétrico publicado com sucesso via
+    \acrshort{mqtts}. \\ \hline
+\texttt{3V3} e \texttt{GND} & Alimentação
+    & Alimentação regulada de $3{,}3\text{ V}$ do transceptor SN65HVD230 e referência
+    comum com os pinos 4 e 5 do conector \acrshort{obd}. \\ \hline
+\texttt{CAN\_H} (Pino 6) e \texttt{CAN\_L} (Pino 14) & Diferencial
+    & Barramento diferencial automotivo ISO 15765-4 do conector \acrshort{obd} conectado
+    aos pinos \texttt{CANH} e \texttt{CANL} do SN65HVD230. \\ \hline
+\end{tabular}\par}
+\vspace{4pt}
+{\footnotesize\raggedright
+Fonte: Elaborado pelo autor (2026).\par}
+\end{table}
+
+\section{Organização do repositório e estrutura de diretórios no GitHub}
+
+Para assegurar rastreabilidade, reprodutibilidade experimental e isolamento entre os
+domínios de \textit{hardware} embarcado, infraestrutura de nuvem e visualização
+analítica, todo o código-fonte do projeto foi consolidado em um repositório único
+(\textit{monorepo}) versionado sob o sistema Git e hospedado na plataforma GitHub. A
+árvore de diretórios foi projetada em estrita observância ao princípio de Separação de
+Preocupações (\textit{Separation of Concerns}) \cite{martin2017}, concentrando os
+artefatos de implementação em três núcleos funcionais complementados pelos diretórios de
+segurança e documentação:
+
+\begin{enumerate}
+    \item \textbf{Núcleo de \textit{Hardware} e \textit{Firmware} Embarcado
+        (\texttt{hardware/}):} Subdivide-se entre o diretório de prototipagem preliminar
+        (\texttt{hardware/\allowbreak arduino\_sketch/}, apoiado pelo código de ensaio
+        criptográfico \texttt{test/\allowbreak arduino/\allowbreak
+        mqtts\_test/\allowbreak mqtts\_test.ino}) e o diretório de produção
+        (\texttt{hardware/\allowbreak esp32/}) regido pelo \textit{framework} ESP-IDF.
+        Neste último, a compilação global é parametrizada pelo manifesto raiz
+        \texttt{CMakeLists.txt} e o ponto de entrada da aplicação reside em
+        \texttt{main/\allowbreak main.c}. Os subsistemas de baixo nível encontram-se
+        encapsulados em quatro pacotes independentes no diretório
+        \texttt{hardware/\allowbreak esp32/\allowbreak components/}: \texttt{telemetry/}
+        (gerenciamento concorrente de estado em memória), \texttt{obd2\_can/}
+        (comunicação automotiva \acrshort{twai}/\acrshort{can}), \texttt{wifi\_manager/}
+        (conectividade sem fio e sincronização de rede) e \texttt{mqtt\_service/}
+        (transporte seguro \acrshort{mqtts} e certificado raiz embutido
+        \texttt{ca\_cert.h}). Cada componente possui cabeçalho público próprio
+        (\texttt{include/*.h}), unidade de tradução privada (\texttt{*.c}) e descritor
+        de compilação local (\texttt{CMakeLists.txt}).
+    \item \textbf{Núcleo de \textit{Backend}, Persistência e Testes
+        (\texttt{backend/}):} Estruturado modularmente para desacoplar configuração,
+        transporte assíncrono, validação e banco de dados. Compreende o módulo de
+        parametrização centralizada (\texttt{backend/\allowbreak config.py}), a camada
+        de persistência relacional e definição da entidade \acrshort{orm}
+        (\texttt{backend/\allowbreak database.py} e
+        \texttt{backend/\allowbreak models/\allowbreak telemetry.py}, responsáveis pelo
+        gerenciamento do arquivo de banco de dados \texttt{vehicle\_data.db}), os
+        contratos de validação de fronteira
+        (\texttt{backend/\allowbreak schemas/\allowbreak telemetry.py}), o trabalhador
+        assíncrono de subscrição de mensageria
+        (\texttt{backend/\allowbreak mqtt\_client.py}) e o servidor de aplicação
+        \textit{web} RESTful (\texttt{backend/\allowbreak main.py}). A verificação
+        determinística dessa infraestrutura concentra-se no subdiretório
+        \texttt{backend/\allowbreak tests/}, composto pelas suítes automatizadas
+        \texttt{test\_main.py} e \texttt{test\_mqtt.py}.
+    \item \textbf{Núcleo de Visualização, Emulação e Documentação (\texttt{frontend/},
+        \texttt{scripts/}, \texttt{certs/} e \texttt{docs/}):} A interface gráfica de
+        monitoramento em tempo real está implementada em
+        \texttt{frontend/\allowbreak app.py}, enquanto o gerador sintético de tráfego
+        telemétrico veicular reside em \texttt{scripts/\allowbreak mock\_car.py}. A
+        cadeia de certificação pública X.509 da autoridade certificadora do
+        \textit{broker} (\texttt{mosquitto.org.crt}) é mantida de forma centralizada
+        para validação cruzada entre emulador e servidor, ao passo que o diretório
+        \texttt{docs/} armazena a documentação arquitetural e os códigos-fonte
+        tipográficos da presente monografia.
+\end{enumerate}
+
+O Quadro~\ref{quad:repo_estrutura} sintetiza o mapeamento completo dos diretórios e
+artefatos de código que compõem o repositório do projeto, relacionando sua linguagem ou
+tecnologia base à respectiva responsabilidade arquitetural.
+
+\begin{table}[!htb]
+\centering
+\refstepcounter{quadro}\label{quad:repo_estrutura}
+{\footnotesize
+\textbf{Quadro \thequadro{} -- Estrutura modular de diretórios e artefatos de código no
+repositório GitHub}\par}
+\vspace{4pt}
+{\footnotesize
+\begin{tabular}{|>{\raggedright\arraybackslash}p{4.3cm}|>{\raggedright\arraybackslash}p{2.7cm}|>{\raggedright\arraybackslash}p{6.8cm}|}
+\hline
+\textbf{Diretório / Artefato} & \textbf{Tecnologia Base}
+    & \textbf{Responsabilidade Arquitetural no Sistema} \\ \hline
+\texttt{hardware/\allowbreak esp32/\allowbreak main/main.c} & C (ESP-IDF v6.1)
+    & Ponto de entrada (\texttt{app\_main}) e orquestração da inicialização
+    determinística dos componentes embarcados. \\ \hline
+\texttt{hardware/\allowbreak esp32/\allowbreak components/\allowbreak telemetry/}
+    & C / FreeRTOS
+    & Repositório de estado telemétrico em memória volátil protegido por semáforo de
+    exclusão mútua (\textit{Mutex}). \\ \hline
+\texttt{hardware/\allowbreak esp32/\allowbreak components/\allowbreak obd2\_can/}
+    & C / Driver \acrshort{twai}
+    & Aquisição ativa de \acrshort{pid}s no barramento \acrshort{can}
+    ($500\text{ kbaud}$) e conversão física segundo a norma \acrshort{sae} J1979. \\
+    \hline
+\texttt{hardware/\allowbreak esp32/\allowbreak components/\allowbreak wifi\_manager/}
+    & C / ESP-Wi-Fi
+    & Gerenciamento de conexão IEEE 802.11, reconexão automática e barreira de
+    sincronização via \textit{EventGroup}. \\ \hline
+\texttt{hardware/\allowbreak esp32/\allowbreak components/\allowbreak mqtt\_service/}
+    & C / \texttt{esp-mqtt} (\acrshort{tls})
+    & Publicação periódica de pacotes \acrshort{json} via \acrshort{mqtts} (porta 8883)
+    com certificado X.509 embutido em memória \textit{Flash}. \\ \hline
+\texttt{backend/\allowbreak config.py} & Python 3.12
+    & Fonte Única da Verdade (\acrshort{ssot}) para constantes de rede, tópicos
+    \acrshort{mqtt} e resolução de caminhos de arquivos. \\ \hline
+\texttt{backend/\allowbreak database.py} e \texttt{models/\allowbreak telemetry.py}
+    & SQLAlchemy 2.0 / SQLite
+    & Configuração do motor relacional, controle de sessões transacionais
+    \acrshort{acid} e mapeamento da tabela \texttt{telemetry}. \\ \hline
+\texttt{backend/\allowbreak schemas/\allowbreak telemetry.py} & Pydantic v2
+    & Validação sintática e semântica estrita de tipos e contratos de entrada e saída da
+    \acrshort{api}. \\ \hline
+\texttt{backend/\allowbreak mqtt\_client.py} & Eclipse Paho-MQTT
+    & Trabalhador assíncrono de subscrição coringa (\textit{multi-tenant}) sobre
+    \acrshort{tls} v1.2 e persistência defensiva. \\ \hline
+\texttt{backend/\allowbreak main.py} & FastAPI / Uvicorn
+    & Exposição de rotas RESTful (\texttt{GET}/\texttt{POST}) e gerenciamento do ciclo
+    de vida (\texttt{lifespan}) do serviço de ingestão. \\ \hline
+\texttt{backend/\allowbreak tests/\allowbreak test\_main.py} e \texttt{test\_mqtt.py}
+    & \texttt{pytest} / \texttt{unittest.mock}
+    & Suíte automatizada de testes unitários e de integração das rotas \acrshort{http} e
+    do consumidor \acrshort{mqtts}. \\ \hline
+\texttt{scripts/\allowbreak mock\_car.py} & Python 3.12 (\acrshort{mqtts})
+    & Emulador sintético de dinâmica veicular para testes de carga e validação contínua
+    sem dependência do veículo. \\ \hline
+\texttt{frontend/\allowbreak app.py} & Streamlit / Pandas
+    & \textit{Dashboard} analítico em tempo real com atualização seletiva sem
+    \textit{flicker} e cálculo de grandezas cinemáticas. \\ \hline
+\texttt{certs/\allowbreak mosquitto.org.crt} & Certificado X.509
+    & Cadeia de autoridade certificadora raiz para autenticação criptográfica
+    \acrshort{tls} v1.2 perante o \textit{broker} em nuvem. \\ \hline
+\end{tabular}\par}
+\vspace{4pt}
+{\footnotesize\raggedright
+Fonte: Elaborado pelo autor (2026).\par}
+\end{table}
+
+\section{Engenharia de \textit{firmware} embarcado}
+
+Previamente à implementação definitiva do \textit{software} de baixo nível, conduziu-se
+uma prova de conceito exploratória (\textit{Spike} tecnológico) utilizando o núcleo
+Arduino (\textit{Arduino Core}) com as bibliotecas \texttt{WiFiClientSecure} e
+\texttt{PubSubClient}, visando aferir a viabilidade do aperto de mão
+(\textit{handshake}) criptográfico \acrshort{tls} v1.2 na porta 8883 com o certificado
+raiz X.509 embutido em memória \textit{Flash}. Embora o experimento tenha comprovado a
+capacidade da aceleração criptográfica por \textit{hardware} do ESP32 para processar
+cifras assimétricas RSA e simétricas AES-GCM sem degradação severa de latência,
+verificou-se empiricamente a limitação estrutural apontada na Seção~\ref{sec:espidf}: a
+abstração cooperativa do ambiente Arduino restringia o controle determinístico sobre
+prioridades de interrupção do \acrshort{rtos}, o acesso direto às filas de recepção do
+periférico \acrshort{twai} e o isolamento estrito de memória. Por conseguinte, migrou-se
+o desenvolvimento final para linguagem C nativa sobre o \textit{framework} oficial
+\acrshort{espidf} v6.1 e o \textit{kernel} FreeRTOS em arquitetura \acrshort{smp},
+compilado via sistema CMake/Ninja com a cadeia \texttt{xtensa-esp32-elf-gcc}
+\cite{espressif2026}.
+
+Aplicando o modelo de Arquitetura Baseada em Componentes (\acrshort{cba}) fundamentado
+na Seção~\ref{sec:espidf} \cite{iso42010}, o código-fonte monolítico inicial foi
+particionado em quatro bibliotecas estáticas independentes registradas via macro
+\texttt{idf\_component\_register(...)}, coordenadas por um módulo orquestrador enxuto
+cuja função principal \texttt{app\_main()} foi reduzida a 35 linhas dedicadas à
+inicialização sequencial e verificação estrita de falhas (\texttt{ESP\_ERROR\_CHECK}).
+
+O
+primeiro componente implementado atua como o repositório central de estado telemétrico
+em memória volátil por meio da estrutura \texttt{telemetry\_\allowbreak data\_t}, que
+armazena as grandezas \texttt{rpm}, \texttt{temperature}, \texttt{speed}, a marca
+temporal (\texttt{timestamp\_ms}) e sinalizadores booleanos de validade
+(\texttt{rpm\_valid}, \texttt{temp\_\allowbreak valid} e \texttt{speed\_valid}). Em
+aderência às diretrizes de segurança de código MISRA C:2012 \cite{misra2013} e aos
+mecanismos de sincronização de seções críticas descritos na
+Seção~\ref{sec:rtos_concorrencia}, a instância de dados é encapsulada no escopo restrito
+do módulo com o qualificador \texttt{static}, e todas as rotinas de escrita atômica
+(\texttt{telemetry\_set\_*}) e de extração de cópia consistente
+(\texttt{telemetry\_\allowbreak get\_snapshot}) são protegidas por um semáforo de
+exclusão mútua (FreeRTOS \textit{Mutex}, \texttt{Semaphore\allowbreak Handle\_t
+s\_mutex}, com tempo limite de $100\text{ ms}$), impedindo condições de corrida e
+leituras parciais entre tarefas concorrentes.
+
+O segundo componente materializa a pilha de comunicação diagnóstica automotiva
+estratificada na Seção~\ref{sec:convergencia_osi}, operando nas camadas física, de
+enlace e de transporte da norma ISO 15765-4 \cite{iso15765} por meio do controlador
+nativo \acrshort{twai} configurado a $500\text{ kbaud}$ via macro
+\texttt{TWAI\_TIMING\_\allowbreak CONFIG\_\allowbreak 500KBITS()}, modo operacional
+normal (\texttt{TWAI\_\allowbreak MODE\_\allowbreak NORMAL}) e filtro de aceitação
+aberto (\texttt{TWAI\_\allowbreak FILTER\_\allowbreak CONFIG\_\allowbreak
+ACCEPT\_\allowbreak ALL()}). A aquisição ativa de telemetria opera por meio de duas
+tarefas concorrentes no FreeRTOS:
+
+\begin{itemize}
+    \item \textbf{Tarefa de transmissão (\texttt{twai\_transmit\_task}):} Executa em
+        ciclo determinístico de $100\text{ ms}$, despachando quadros \acrshort{can}
+        padrão de $11\text{ bits}$ com código de comprimento de dados (\acrshort{dlc})
+        igual a $8\text{ bytes}$ direcionados ao identificador funcional de
+        \textit{broadcast} \texttt{0x7DF}. A carga útil requisita no Modo de Serviço
+        \texttt{0x01} os identificadores \acrshort{pid} \texttt{0x0C} (rotação do
+        motor), \texttt{0x0D} (velocidade veicular) e \texttt{0x05} (temperatura do
+        líquido de arrefecimento), preenchendo os bytes remanescentes com valores de
+        \textit{padding} (\texttt{0x55} e \texttt{0xAA}).
+    \item \textbf{Tarefa de recepção (\texttt{twai\_receive\_task}):} Consome de forma
+        contínua os pacotes enfileirados pela rotina de serviço de interrupção
+        (\acrshort{isr}) do \textit{driver} \acrshort{twai}, filtrando quadros
+        originados pela \acrshort{ecu} principal do motor (\texttt{0x7E8}) que
+        apresentem byte de confirmação de serviço \texttt{0x41}
+        ($\texttt{0x01} + \texttt{0x40}$). Previamente à indexação dos vetores de carga
+        útil, aplica-se validação defensiva do comprimento de dados
+        ($\text{\acrshort{dlc}} \ge 5$ para o \acrshort{pid} de dois bytes e
+        $\text{\acrshort{dlc}} \ge 3$ para grandezas de um byte), prevenindo falhas de
+        segmentação de memória por quadros truncados ou ruidosos.
+\end{itemize}
+
+Na camada de aplicação diagnóstica (Seção~\ref{sec:aquisicao_obd2}), a conversão dos
+bytes brutos hexadecimais retornados pela \acrshort{ecu}, nos quais $A$ e $B$
+representam os bytes decimais de dados ($0$ a $255$), para grandezas físicas de
+engenharia segue as expressões normativas definidas pela especificação \acrshort{sae}
+J1979 \cite{saej1979}, implementadas conforme as Equações~\eqref{eq:rpm},
+\eqref{eq:speed} e \eqref{eq:temp}:
+
+\begin{equation}\label{eq:rpm}
+\text{RPM} = \frac{256 \cdot A + B}{4}
+\end{equation}
+
+\begin{equation}\label{eq:speed}
+v = A
+\end{equation}
+
+\begin{equation}\label{eq:temp}
+T_{\text{ect}} = A - 40
+\end{equation}
+
+\noindent em que $\text{RPM}$ corresponde à rotação angular do eixo de manivelas (em
+$\text{rpm}$, \acrshort{pid} \texttt{0x0C} na Equação~\eqref{eq:rpm}), $v$ representa a
+velocidade instantânea de deslocamento do veículo (em $\text{km/h}$, \acrshort{pid}
+\texttt{0x0D} na Equação~\eqref{eq:speed}) e $T_{\text{ect}}$ denota a temperatura do
+líquido de arrefecimento do motor (em $^{\circ}\text{C}$, \acrshort{pid} \texttt{0x05}
+na Equação~\eqref{eq:temp}, com deslocamento térmico de $-40\text{ }^{\circ}\text{C}$
+para representação de temperaturas negativas em aritmética inteira sem sinal).
+Adicionalmente, para erradicar gargalos temporais na recepção, substituiu-se o uso de
+atrasos bloqueantes (\texttt{vTaskDelay}) no acionamento do indicador visual
+\texttt{GPIO 14} por um temporizador de \textit{software} assíncrono do FreeRTOS
+(\texttt{can\_led\_timer}, parametrizado em $30\text{ ms}$), liberando imediatamente a
+tarefa de recepção para drenar a fila do controlador \acrshort{twai} sem perda de
+quadros.
+
+Por sua vez, o terceiro componente, encarregado da gerência de conectividade sem fio,
+configura a interface de rádio em modo \textit{Station} (\texttt{WIFI\_MODE\_STA})
+dotada de máquina de estados de reconexão automática
+(\texttt{WIFI\_\allowbreak EVENT\_\allowbreak STA\_\allowbreak DISCONNECTED}) e barreira
+de sincronização determinística via FreeRTOS \textit{EventGroup}
+(\texttt{WIFI\_\allowbreak CONNECTED\_\allowbreak BIT}), a qual retém a inicialização da
+camada de mensageria até a confirmação do evento
+\texttt{IP\_\allowbreak EVENT\_\allowbreak STA\_\allowbreak GOT\_IP} pelo servidor DHCP
+do roteador móvel. Finalmente, o quarto componente implementa o cliente de mensageria
+segura baseado na biblioteca nativa \texttt{esp-mqtt}, apontado para o endereço
+\texttt{mqtts://test.mosquitto.org:8883} sobre \acrshort{tls} v1.2 (pilha mbedTLS)
+\cite{dierks2008}. O certificado raiz X.509 da autoridade certificadora é compilado
+diretamente na imagem binária em memória \textit{Flash} via diretiva
+\texttt{EMBED\_\allowbreak TXTFILES}, enquanto a tarefa periódica
+\texttt{mqtt\_\allowbreak publisher\_\allowbreak task} opera em cadência de
+$1000\text{ ms}$, adquire o \textit{snapshot} protegido por \textit{Mutex}, serializa a
+carga útil em formato \acrshort{json}
+(\texttt{\{"rpm": ..., "temperature": ..., "speed": ...\}}) e publica no tópico do
+veículo, acionando o pino \texttt{GPIO 26} com desarme não bloqueante mediado por
+temporizador FreeRTOS (\texttt{mqtt\_\allowbreak led\_timer}, $50\text{ ms}$). Uma vez
+transmitidos os pacotes criptografados pela unidade embarcada, o fluxo de dados alcança
+a infraestrutura de ingestão em nuvem.
+
+\section{Engenharia de \textit{backend}, segurança e persistência}
+
+O desenvolvimento da infraestrutura de servidor iniciou-se sob a estratégia de
+engenharia \textit{Mock-First}, validando os contratos de dados e a persistência
+relacional mediante requisições síncronas (\acrshort{http} POST), para em seguida
+efetuar a transição arquitetural definitiva ao paradigma assíncrono orientado a eventos
+via protocolo \acrshort{mqtts} na porta 8883 \cite{oasis2014,iso20922}. Em alinhamento
+aos fundamentos de mensageria expostos na Seção~\ref{sec:mqtt_tls}, a árvore de tópicos
+foi modelada em estrita observância à Seção 4.7 da especificação OASIS \acrshort{mqtt}
+v3.1.1, que veda o uso de caracteres coringa (\textit{wildcards}) em operações de
+publicação. Dessa forma, enquanto o microcontrolador ESP32 e o emulador publicam
+(\texttt{PUBLISH}) exclusivamente em tópicos concretos e unívocos
+(\texttt{ls-praxedes/\allowbreak scanner-obd2/\allowbreak esp32} e
+\texttt{ls-praxedes/\allowbreak scanner-obd2/\allowbreak qsr5c99}), o serviço de
+ingestão no \textit{backend} subscreve (\texttt{SUBSCRIBE}) utilizando o caractere
+coringa de nível único (\texttt{ls-praxedes/\allowbreak scanner-obd2/+}), viabilizando
+uma arquitetura \textit{multi-tenant} capaz de agregar múltiplos veículos
+simultaneamente em um único trabalhador (\textit{worker}) de processamento.
+
+Para mitigar na prática os vetores de escuta passiva (\textit{eavesdropping}) e de
+intermediário (\acrshort{mitm}) caracterizados na Seção~\ref{sec:vulnerabilidades_mqtt},
+a segurança do sistema foi projetada sob a arquitetura \textit{Zero Trust} (NIST SP
+800-207), estabelecendo a distinção formal entre criptografia de canal em trânsito e
+autorização de acesso \cite{rose2020,baars2018}. Enquanto o transporte sobre
+\acrshort{tls} v1.2 com verificação matemática da cadeia X.509 assegura a
+confidencialidade e a autenticidade da conexão, a arquitetura especifica para ambientes
+de produção o bloqueio de conexões anônimas no \textit{broker} e a aplicação de Listas
+de Controle de Acesso (\acrshort{acl}s, do inglês \textit{Access Control Lists}) regidas
+pelo Princípio do Menor Privilégio, restringindo o perfil credenciado do veículo
+exclusivamente à permissão de escrita (\texttt{write}) em seu identificador próprio e
+reservando a permissão de leitura (\texttt{read}) em escopo coringa unicamente ao
+serviço de ingestão do \textit{backend}.
+
+Internamente, o serviço de aplicação foi estruturado sob o padrão de Arquitetura em
+Camadas (\textit{Layered Architecture}) \cite{fowler2002}, combinado às diretrizes de
+portabilidade e ciclo de vida da metodologia \textit{The Twelve-Factor App}
+\cite{wiggins2011}:
+
+\begin{itemize}
+    \item \textbf{Fonte Única da Verdade (\acrshort{ssot}):} Em cumprimento ao Fator III
+        (\textit{Config}) do \textit{The Twelve-Factor App}, centralizaram-se em módulo
+        dedicado todas as constantes de infraestrutura (\texttt{MQTT\_BROKER},
+        \texttt{MQTT\_PORT = 8883}, \texttt{MQTT\_TOPIC},
+        \texttt{MQTT\_\allowbreak MOCK\_\allowbreak TOPIC}) e a resolução dinâmica de
+        caminhos absolutos de sistema de arquivos via biblioteca \texttt{pathlib.Path}
+        (\texttt{CA\_CERT\_PATH} e \texttt{DATABASE\_URL}), garantindo portabilidade
+        entre sistemas operacionais e eliminando divergências de parametrização.
+    \item \textbf{Ingestão Assíncrona e Orquestração \acrshort{asgi}:} O cliente de
+        mensageria Eclipse Paho-MQTT é inicializado com contexto criptográfico
+        \texttt{ssl.PROTOCOL\_\allowbreak TLSv1\_2} (\texttt{tls\_set}) e acoplado ao
+        servidor \textit{web} FastAPI (executado sobre o servidor \acrshort{asgi}
+        Uvicorn) por intermédio do gerenciador de contexto assíncrono
+        \texttt{@asynccontextmanager lifespan(app)}. Na partida da \acrshort{api}, a
+        invocação de \texttt{client.\allowbreak loop\_start()} instancia uma
+        \textit{thread} de segundo plano não bloqueante para escuta contínua do
+        \textit{broker} sem obstruir o laço de eventos principal de atendimento a
+        requisições \acrshort{http}; no encerramento do processo, executam-se
+        \texttt{client.\allowbreak loop\_stop()} e
+        \texttt{client.\allowbreak disconnect()}, assegurando o desligamento gracioso
+        (\textit{graceful shutdown}, Fator IX -- \textit{Disposability}).
+\end{itemize}
+
+Para proteger a integridade do banco de dados perante pacotes ruidosos ou inválidos, a
+função de retorno (\textit{callback}) de recepção \texttt{on\_message} implementa um
+mecanismo defensivo em três níveis: (i) captura de exceções de decodificação sintática
+(\texttt{json.\allowbreak JSONDecodeError}) para descarte imediato de cargas binárias
+truncadas; (ii) sanitização estrita de contrato e tipos de domínio via Pydantic v2 (por
+meio das classes de esquema \texttt{TelemetryCreate} e
+\texttt{Telemetry\allowbreak Response} com \texttt{from\_attributes = True}), atuando
+como um \textit{firewall} de aplicação que rejeita pacotes malformados
+(\texttt{pydantic.\allowbreak ValidationError}) antes da camada de persistência; e (iii)
+bloco transacional \texttt{try...except...finally} sobre o mapeamento objeto-relacional
+SQLAlchemy 2.0 \acrshort{orm}, executando \texttt{db.commit()} mediante sucesso ou
+\texttt{db.rollback()} em caso de falha de entrada e saída, sucedido invariavelmente
+pelo fechamento da sessão via \texttt{db.close()} para evitar vazamento de descritores
+de arquivo.
+
+Os registros validados são persistidos de maneira aderente às propriedades
+\acrshort{acid} na tabela relacional \texttt{telemetry} do banco de dados SQLite, cujo
+esquema compreende as colunas \texttt{id} (chave primária inteira indexada),
+\texttt{rpm} (\texttt{Float}, não nulo), \texttt{temperature} (\texttt{Float}, não
+nulo), \texttt{speed} (\texttt{Float}, anulável) e \texttt{timestamp} (\texttt{DateTime}
+registrado em fuso horário UTC com precisão de microssegundos). Para consumo externo, a
+camada de aplicação expõe os \textit{endpoints} RESTful \texttt{/api/v1/telemetry}
+(\texttt{POST} e \texttt{GET} com suporte a paginação via parâmetros \texttt{skip} e
+\texttt{limit}, ordenação cronológica decrescente
+\texttt{Telemetry.\allowbreak timestamp.\allowbreak desc()} e Injeção de Dependência via
+\texttt{Depends(get\_db)}). A corretude de toda a infraestrutura de servidor foi
+verificada por uma suíte automatizada de testes unitários com o \textit{framework}
+\texttt{pytest}, abrangendo testes de rotas via \texttt{TestClient} e testes isolados do
+trabalhador de mensageria com objetos simulados
+(\texttt{unittest.\allowbreak mock.\allowbreak MagicMock}), validando tanto a
+persistência de pacotes íntegros quanto a rejeição determinística de cargas corrompidas
+sem dependência de \textit{hardware} físico.
+
+\section{Emulação veicular, visualização em tempo real e modelagem da camada de detecção
+de anomalias}
+
+Com o propósito de viabilizar testes de carga e validação contínua da esteira
+telemétrica independentemente do veículo em rodagem, desenvolveu-se um emulador
+sintético de dinâmica veicular em Python. O utilitário consome os parâmetros
+centralizados de infraestrutura, estabelece sessão segura \acrshort{mqtts}
+(\acrshort{tls} v1.2 na porta 8883) mediante validação da cadeia de certificação X.509 e
+publica pacotes \acrshort{json} a cada $0{,}5\text{ s}$, simulando variações
+estocásticas e regimes operacionais realistas de rotação, temperatura e velocidade.
+
+Na camada de apresentação, a interface analítica interativa foi construída utilizando o
+\textit{framework} Streamlit. A aplicação consome periodicamente o \textit{endpoint}
+RESTful \texttt{GET /api/v1/telemetry}, estrutura as séries temporais recebidas em
+objetos \textit{DataFrame} da biblioteca Pandas (convertendo os carimbos
+\texttt{timestamp} para objetos temporais e assegurando a indexação cronológica
+crescente para plotagem fiel da evolução temporal da esquerda para a direita), computa
+variações instantâneas entre leituras consecutivas ($\Delta\text{RPM}$,
+$\Delta T_{\text{ect}}$ e $\Delta v$) e a grandeza derivada de aceleração cinemática
+instantânea ($a = \Delta v / \Delta t$), além de monitorar o estado de conectividade
+ativa do veículo. Para eliminar o efeito visual de recarregamento integral da página
+(\textit{flicker}) e a latência de redesenho, implementou-se a atualização seletiva da
+árvore de interface por meio de um contêiner dinâmico (\texttt{st.empty()}) realimentado
+em laço de $0{,}5\text{ s}$ (\texttt{auto\_refresh}), renderizando cartões de
+indicadores-chave (\textit{metrics}) e três gráficos de linha independentes para
+rotação, temperatura do arrefecimento e velocidade, o que previne a distorção visual de
+escala decorrente da sobreposição de grandezas de ordens de magnitude distintas.
+
+No escopo de desenvolvimento incremental do projeto, enquanto os subsistemas de
+aquisição embarcada no barramento \acrshort{can}, transporte criptografado
+\acrshort{mqtts}, ingestão validada, persistência relacional \acrshort{acid} e
+visualização em tempo real encontram-se integralmente implementados e operacionais, a
+camada de inteligência artificial é apresentada neste trabalho em nível de especificação
+arquitetural e modelagem analítico-matemática projetada para integrar a plataforma como
+etapa subsequente do fluxo de dados. Retomando o ciclo metodológico \acrshort{crispdm}
+fundamentado na Seção~\ref{sec:crispdm_iforest} \cite{wirth2000,geron2022}, a modelagem
+do \textit{pipeline} para detecção não supervisionada de anomalias operacionais
+estrutura-se em três estágios aplicados às grandezas do motor:
+
+\begin{enumerate}
+    \item \textbf{Compreensão do Negócio e dos Dados (\textit{Business and Data
+        Understanding}):} Caracterização do acoplamento termodinâmico e cinemático
+        nominal do motor a combustão interna, compreendendo a faixa de estabilização
+        térmica do líquido de arrefecimento (tipicamente entre
+        $85\text{ }^{\circ}\text{C}$ e $105\text{ }^{\circ}\text{C}$ após o aquecimento
+        inicial) e a relação de proporcionalidade entre rotação do motor e velocidade
+        veicular em cada marcha de transmissão.
+    \item \textbf{Preparação dos Dados (\textit{Data Preparation}):} Extração das séries
+        históricas persistidas no banco relacional, remoção de registros incompletos,
+        filtragem de transientes espúrios de ignição e estruturação da matriz de
+        atributos multivariada $\mathbf{X}$, na qual cada observação temporal $i$ é
+        representada pelo vetor de características
+        $\mathbf{x}_i = [\text{RPM}_i, T_{\text{ect},i}, v_i]^T$.
+    \item \textbf{Modelagem Analítica (\textit{Isolation Forest}):} Formulação do modelo
+        não supervisionado baseado no princípio de particionamento recursivo estocástico
+        em árvores binárias de isolamento (\textit{iTrees}) exposto na
+        Seção~\ref{sec:crispdm_iforest}.
+\end{enumerate}
+
+A quantificação formal do grau de anormalidade de cada vetor telemétrico $\mathbf{x}$ em
+uma amostra de $n$ instâncias é determinada pelo escore de anomalia $s(\mathbf{x}, n)$,
+definido por \citeonline{liu2008} conforme a Equação~\eqref{eq:iforest}:
+
+\begin{equation}\label{eq:iforest}
+s(\mathbf{x}, n) = 2^{-\frac{E(h(\mathbf{x}))}{c(n)}}
+\end{equation}
+
+\noindent onde $h(\mathbf{x})$ representa o comprimento de caminho
+(\textit{path length}, número de arestas percorridas desde o nó raiz até o nó folha de
+isolamento) da amostra $\mathbf{x}$, $E(h(\mathbf{x}))$ denota a média aritmética de
+$h(\mathbf{x})$ através de todas as árvores de isolamento da floresta e $c(n)$
+corresponde ao fator de normalização dado pelo comprimento médio de uma busca
+malsucedida em uma Árvore Binária de Busca (\textit{Binary Search Tree}) com $n$ nós.
+Conforme expresso na Equação~\eqref{eq:iforest}, pontos operacionais situados em regiões
+esparsas da distribuição multivariada, tais como episódios de sobreaquecimento térmico
+severo ou elevação abrupta de rotação desacoplada da carga cinemática, requerem poucas
+partições para serem isolados, resultando em $E(h(\mathbf{x}))$ reduzido e conduzindo o
+escore ao limite assintótico $s(\mathbf{x}, n) \to 1$. Tais instâncias são classificadas
+pelo modelo com o rótulo \texttt{-1} (anomalia operacional), em contraste às amostras de
+regime estacionário normal rotuladas como \texttt{+1} ($s(\mathbf{x}, n) \le 0{,}5$).
+
+\section{Apoio instrumental de IAG na verificação de lacunas e revisão}
+
+Em conformidade com as diretrizes institucionais estabelecidas pela Resolução Normativa
+nº 17/2025 e pela Instrução Normativa nº 06/2026 da Pró-Reitoria de Pós-Graduação e
+Pesquisa da Universidade Federal de São Paulo \cite{unifesp_iag2026}, registra-se que,
+ao longo do desenvolvimento do \acrshort{tcc} II durante o segundo semestre de 2026,
+utilizou-se de forma complementar a ferramenta de Inteligência Artificial Generativa
+(\acrshort{iag}) Google Gemini (integrada ao ambiente de desenvolvimento) estritamente
+como instrumento de apoio à revisão e à verificação exploratória de lacunas
+(\textit{gap analysis}). O emprego da ferramenta circunscreveu-se a três atividades
+auxiliares: (i) verificação de lacunas técnicas e casos de borda
+(\textit{gap checking}), auxiliando o autor na inspeção de potenciais pontos cegos de
+concorrência entre tarefas no \textit{firmware} embarcado e no levantamento de cenários
+de exceção para a cobertura de testes unitários do \textit{backend}; (ii) consulta
+remissiva a normas técnicas, agilizando a localização de cláusulas específicas em
+padrões de engenharia (tais como as regras de subscrição com caracteres coringa do
+protocolo OASIS \acrshort{mqtt}, diretrizes de encapsulamento MISRA C:2012 e normas de
+formatação bibliográfica ABNT); e (iii) revisão linguística, gramatical e de organização
+estrutural das seções textuais previamente concebidas pelo autor.
+
+Ressalta-se com rigor que a concepção arquitetural, a formulação lógica, a implementação
+integral do código-fonte, a condução experimental e a interpretação dos resultados
+constituíram atividades intelectuais exclusivas e intransferíveis do autor. Para
+assegurar a fidedignidade científica do trabalho, todo apontamento de lacuna ou sugestão
+textual oriundo da ferramenta foi submetido a um protocolo sistemático de validação
+humana e empírica em três etapas antes de sua consolidação: (1) confronto direto com a
+literatura primária, verificando a exatidão física e normativa perante os
+\textit{datasheets} oficiais dos fabricantes (Espressif Systems e Texas Instruments) e
+as especificações internacionais (ISO 15765-4, \acrshort{sae} J1979 e IETF RFC 5246);
+(2) verificação determinística de \textit{software}, submetendo o código embarcado à
+compilação estrita sem avisos no compilador \texttt{xtensa-esp32-elf-gcc} e a camada de
+servidor à bateria automatizada de testes unitários com \texttt{pytest}; e (3) validação
+empírica em bancada e no veículo alvo, comprovando o determinismo temporal e funcional
+da solução no microcontrolador ESP32.
+
+\chapter{Planejamento e Cronograma de Execução}
+
+O cronograma foi estruturado para concentrar as atividades de pesquisa, planejamento e
+projeto no \acrshort{tcc} I, estabelecendo uma base teórica e metodológica sólida
+(Tabela~\ref{tab:cronograma_tcc1}). As atividades práticas de desenvolvimento, montagem,
+testes e análise de resultados estão alocadas para o \acrshort{tcc} II
+(Tabela~\ref{tab:cronograma_tcc2}), focando na implementação e validação da solução
+proposta.
+
+\begin{table}[!htb]
+\centering
+\caption{Cronograma de Atividades -- \acrshort{tcc} I (2025/1)}
+\label{tab:cronograma_tcc1}
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Foco Teórico e Planejamento}}}
+    & \multicolumn{6}{c|}{\textbf{Meses}} \\ \cline{2-7}
+\multicolumn{1}{|c|}{} & \textbf{Fev} & \textbf{Mar} & \textbf{Abr} & \textbf{Mai}
+    & \textbf{Jun} & \textbf{Jul} \\ \hline
+1. Revisão Bibliográfica Aprofundada & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & & & \\ \hline
+2. Definição da Arquitetura do Sistema & & & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+3. Detalhamento do Projeto & & & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & \\ \hline
+4. Estudo de Algoritmos para Análise & & & & & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0}\\ \hline
+5. Compra e Entrega de Componentes & & & & &  & \cellcolor[HTML]{C0C0C0} \\ \hline
+6. Redação da Monografia (Parte I) & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} \\ \hline
+\end{tabular}
+\legend{Fonte: Elaborado pelo autor (2026).}
+\end{table}
+
+\begin{table}[!htb]
+\centering
+\caption{Cronograma de Atividades -- \acrshort{tcc} II (2026/2)}
+\label{tab:cronograma_tcc2}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Foco Prático e Desenvolvimento}}} &
+\multicolumn{5}{c|}{\textbf{Meses}} \\ \cline{2-6}
+\multicolumn{1}{|c|}{} & \textbf{Ago} & \textbf{Set} & \textbf{Out} & \textbf{Nov}
+    & \textbf{Dez} \\ \hline
+7. Montagem e Teste do Hardware & \cellcolor[HTML]{C0C0C0} & & & & \\ \hline
+8. Dev. Leitor de Protocolo & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+9. Dev. Armazenamento e Visualização & & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+10. Coleta e Validação inicial de dados & & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & & \\ \hline
+11. Dev. Módulo de Análise Inteligente & & & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & \\ \hline
+12. Integração e Testes Finais & & & & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} \\ \hline
+13. Redação da Monografia (Parte II) & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0} & \cellcolor[HTML]{C0C0C0}
+    & \cellcolor[HTML]{C0C0C0} \\ \hline
+14. Preparação para a Defesa Final & & & & &  \cellcolor[HTML]{C0C0C0} \\ \hline
+\end{tabular}
+\legend{Fonte: Elaborado pelo autor (2026).}
+\end{table}
+
+% =========================================================================
+% ELEMENTOS PÓS-TEXTUAIS (abnTeX2 + abntex2cite)
+% =========================================================================
+\postextual
+\bibliography{bibliography}
+
+\end{document}
