@@ -68,6 +68,17 @@ venv/
 .cache/
 .vscode/
 
+# Private Data
+
+*.db
+
+
+# LaTeXDocs 
+docs/latex/normas/
+docs/latex/ref/
+docs/latex/TCC_II/imagens
+docs/latex/TCC_II/rev
+
 # ESP-IDF Build & Binaries
 build/
 **/build/
