@@ -1,6 +1,7 @@
 #include "obd2_can.h"
 #include "telemetry.h"
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -28,6 +29,8 @@ typedef struct {
 static QueueHandle_t s_rx_queue = NULL;
 static twai_node_handle_t s_twai_node = NULL;
 static TimerHandle_t s_led_timer = NULL;
+static atomic_bool s_recovery_started = false;
+static atomic_bool s_bus_recovered_log_pending = false;
 
 // Buffer estático de transmissão OBD-II
 static uint8_t s_tx_buffer[8];
@@ -78,20 +81,80 @@ static void obd2_request_pid(uint8_t pid) {
     }
 }
 
+static bool twai_ensure_bus_ready(uint32_t *wait_cycles) {
+    if (s_twai_node == NULL) {
+        return false;
+    }
+
+    if (atomic_exchange(&s_bus_recovered_log_pending, false)) {
+        *wait_cycles = 0;
+        ESP_LOGI(TAG, "Barramento CAN recuperado de Bus-Off! Retomando comunicacao OBD-II.");
+    }
+
+    twai_node_status_t status = {0};
+    if (twai_node_get_info(s_twai_node, &status, NULL) != ESP_OK) {
+        return true;
+    }
+
+    if (status.state != TWAI_ERROR_BUS_OFF) {
+        *wait_cycles = 0;
+        return true;
+    }
+
+    if (!atomic_load(&s_recovery_started)) {
+        ESP_LOGW(TAG, "Barramento CAN em Bus-Off (TEC=%u, REC=%u). Iniciando recuperacao automatica...",
+                 status.tx_error_count, status.rx_error_count);
+        esp_err_t ret = twai_node_recover(s_twai_node);
+        if (ret == ESP_OK) {
+            atomic_store(&s_recovery_started, true);
+            *wait_cycles = 0;
+        } else {
+            ESP_LOGE(TAG, "Falha ao iniciar recuperacao de Bus-Off (%s)", esp_err_to_name(ret));
+        }
+    } else {
+        (*wait_cycles)++;
+        // Emite aviso periódico (~5s) enquanto aguarda 128 sequências recessivas no barramento
+        if ((*wait_cycles % 10U) == 0U) {
+            ESP_LOGW(TAG, "Aguardando barramento CAN para concluir recuperacao de Bus-Off...");
+        }
+    }
+
+    return false;
+}
+
 static void twai_transmit_task(void *arg) {
     const uint8_t pids[] = {0x0C, 0x0D, 0x05};
     const char *pid_names[] = {"RPM (0x0C)", "Velocidade (0x0D)", "Temp. Arrefecimento (0x05)"};
     int idx = 0;
+    uint32_t recovery_wait_cycles = 0;
 
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     while (1) {
-        ESP_LOGD(TAG, "--> [OBD2 SOLICITACAO] Enviando requisicao: %s", pid_names[idx]);
-        obd2_request_pid(pids[idx]);
+        if (twai_ensure_bus_ready(&recovery_wait_cycles)) {
+            ESP_LOGD(TAG, "--> [OBD2 SOLICITACAO] Enviando requisicao: %s", pid_names[idx]);
+            obd2_request_pid(pids[idx]);
+            idx = (idx + 1) % 3;
+        }
 
-        idx = (idx + 1) % 3;
         vTaskDelay(pdMS_TO_TICKS(500));
     }
+}
+
+static bool twai_state_change_cb(twai_node_handle_t handle,
+                                 const twai_state_change_event_data_t *edata,
+                                 void *user_ctx) {
+    (void)handle;
+    (void)user_ctx;
+
+    if (edata->new_sta == TWAI_ERROR_BUS_OFF) {
+        atomic_store(&s_recovery_started, false);
+    } else if (edata->old_sta == TWAI_ERROR_BUS_OFF && edata->new_sta == TWAI_ERROR_ACTIVE) {
+        atomic_store(&s_recovery_started, false);
+        atomic_store(&s_bus_recovered_log_pending, true);
+    }
+
+    return false;
 }
 
 static bool twai_rx_cb(twai_node_handle_t handle,
@@ -205,6 +268,7 @@ esp_err_t obd2_can_init(void) {
 
     twai_event_callbacks_t cbs = {
         .on_rx_done = twai_rx_cb,
+        .on_state_change = twai_state_change_cb,
     };
     ret = twai_node_register_event_callbacks(s_twai_node, &cbs, NULL);
     if (ret != ESP_OK) {
