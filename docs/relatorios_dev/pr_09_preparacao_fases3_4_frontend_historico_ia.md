@@ -3,7 +3,7 @@
 **Projeto:** Central de Análise Veicular Preditiva (IoT)  
 **Curso:** Engenharia da Computação — Trabalho de Conclusão de Curso (TCC)  
 **Módulo:** Arquitetura de Frontend Modular, Consultas Temporais RESTful e Scaffolding Visual (Fases 3 e 4)  
-**Referência de Desenvolvimento:** Evolução pós-Semana 5 seguindo o cronograma de [planejador.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/agents/planejador.md) (Working Tree / pré-commit)  
+**Commit Associado:** `3636da2` (evolução pós-Semana 5 seguindo o cronograma de [planejador.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/agents/planejador.md))  
 **Data:** 16 de Novembro de 2026  
 **Autor:** Lucas Praxedes `<praxedes158@gmail.com>` (com atuação do Agente Executor Sênior)
 

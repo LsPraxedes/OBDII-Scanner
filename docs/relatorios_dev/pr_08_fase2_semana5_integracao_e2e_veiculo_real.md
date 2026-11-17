@@ -3,7 +3,7 @@
 **Projeto:** Central de Análise Veicular Preditiva (IoT)  
 **Curso:** Engenharia da Computação — Trabalho de Conclusão de Curso (TCC)  
 **Módulo:** Integração Ponta a Ponta (E2E), Telemetria no Dashboard, Diagnóstico de Campo e Resiliência CAN/TWAI  
-**Referência de Desenvolvimento:** Execução do plano de [executor5.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/agents/executor5.md) (Working Tree / pré-commit)  
+**Commit Associado:** `124d3fe` (execução do plano de [executor5.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/agents/executor5.md))  
 **Data:** 16 de Novembro de 2026  
 **Autor:** Lucas Praxedes `<praxedes158@gmail.com>` (com atuação do Agente Executor Sênior — Semana 5)
 
@@ -55,7 +55,7 @@ Além do refinamento da interface de visualização em tempo real, da criação 
 | [frontend/app.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/frontend/app.py) | Refatorado (Etapa Semana 5) | 80 linhas originais (modularizado para 76 linhas no PR #09) | Tratamento de `len == 1` e `speed=None`, ordenação crescente UTC, cálculo de aceleração ($\Delta v / \Delta t$), badge Live/Offline `< 5 s` e dispersão `RPM vs Velocidade`. |
 | [scripts/verify_e2e.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/scripts/verify_e2e.py) | Criado | 410 linhas | Utilitário CLI (`api`, `sqlite`, `auto` e `--watch`) para cálculo de frequência em Hz, intervalos e detecção de perda de pacotes/saltos anômalos. |
 | [docs/guia_validacao_campo.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/docs/guia_validacao_campo.md) | Criado | 79 linhas | Checklist operacional para testes reais no VW Polo Track (Hotspot 4G, chicote OBD-II, LEDs D13/D14/D26, Streamlit e pós-rodagem). |
-| [hardware/esp32/components/obd2_can/obd2_can.c](file:///c:/Users/lucas/Documents/OBDII%20Scanner/hardware/esp32/components/obd2_can/obd2_can.c) | Modificado | +67 / -3 linhas (291 totais) | Callback `twai_state_change_cb` em ISR e função `twai_ensure_bus_ready` com recuperação automática via `twai_node_recover()`. |
+| [hardware/esp32/components/obd2_can/obd2_can.c](file:///c:/Users/lucas/Documents/OBDII%20Scanner/hardware/esp32/components/obd2_can/obd2_can.c) | Modificado | +70 / -3 linhas (291 linhas no PR #08) | Callback `twai_state_change_cb` em ISR e função `twai_ensure_bus_ready` com recuperação automática via `twai_node_recover()`. |
 | [backend/tests/test_frontend_and_e2e.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/backend/tests/test_frontend_and_e2e.py) | Criado | 327 linhas (com adições no PR #09) | Testes unitários da lógica de aceleração, ordenação, status `< 5 s`, análise E2E e renderização real com `streamlit.testing.v1.AppTest`. |
 
 ---
