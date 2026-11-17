@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 class TelemetryCreate(BaseModel):
     """
@@ -19,3 +20,15 @@ class TelemetryResponse(TelemetryCreate):
 
     class Config:
         from_attributes = True
+
+
+class TelemetryDaySummary(BaseModel):
+    """
+    Schema com o resumo diário de registros disponíveis no banco de telemetria.
+    """
+    date: date
+    count: int
+    first_timestamp: datetime
+    last_timestamp: datetime
+
+    model_config = ConfigDict(from_attributes=True)

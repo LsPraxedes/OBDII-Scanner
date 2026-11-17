@@ -22,7 +22,7 @@ class Telemetry(Base):
     rpm = Column(Float, nullable=False)
     temperature = Column(Float, nullable=False)
     speed = Column(Float, nullable=True)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
 def get_db():
     """

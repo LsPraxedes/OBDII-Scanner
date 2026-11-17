@@ -1,80 +1,76 @@
-import streamlit as st
-import pandas as pd
-import requests
-import time
-import sys
 import os
+import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from backend.config import API_URL
+import streamlit as st
 
-st.set_page_config(
-    page_title="Central de Análise Veicular Preditiva",
-    page_icon="🚗",
-    layout="wide"
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from frontend.telemetry_utils import (  # noqa: E402, F401
+    CONNECTION_TIMEOUT_SECONDS,
+    KMH_TO_MS,
+    REFRESH_INTERVAL_SECONDS,
+    compute_acceleration,
+    fetch_telemetry,
+    fetch_telemetry_days,
+    format_metric_delta,
+    get_connection_status,
+    local_day_to_utc_range,
+    prepare_telemetry_dataframe,
+)
+from frontend.views.ai_diagnostics import render_ai_diagnostics_page  # noqa: E402
+from frontend.views.eda import render_eda_page  # noqa: E402
+from frontend.views.history import render_history_page  # noqa: E402
+from frontend.views.live import (  # noqa: E402, F401
+    render_connection_banner,
+    render_dashboard,
+    render_live_page,
 )
 
-st.title("Central de Análise Veicular Preditiva")
-st.write("Visualização em tempo real dos dados do motor (Mock-First).")
+PAGE_LIVE = "📡 Tempo Real"
+PAGE_HISTORY = "📅 Histórico & Viagens"
+PAGE_EDA = "📊 Análise de Padrões (EDA)"
+PAGE_AI = "🤖 Diagnóstico Preditivo (IA)"
 
-def fetch_telemetry():
+
+def main() -> None:
     """
-    Busca os dados do backend.
+    Ponto de entrada da aplicação Streamlit com navegação lateral modular entre
+    tempo real, histórico por dia e páginas preparatórias das Fases 3 e 4.
     """
-    try:
-        response = requests.get(API_URL)
-        if response.status_code == 200:
-            return response.json()
-    except requests.exceptions.ConnectionError:
-        pass
-    return []
+    st.set_page_config(
+        page_title="Central de Análise Veicular Preditiva",
+        page_icon="🚗",
+        layout="wide",
+    )
 
-def render_dashboard(data):
-    if data:
-        df = pd.DataFrame(data)
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        
-        st.subheader("Últimas Leituras")
-        cols = st.columns(3)
-        latest = df.iloc[0]
-        cols[0].metric("Conta-giros", value=f"{int(latest['rpm'])} RPM", delta=f"{int(latest['rpm'] - df.iloc[1]['rpm'])} RPM")
-        cols[1].metric("Temperatura", value=f"{int(latest['temperature'])} °C", delta=f"{int(latest['temperature'] - df.iloc[1]['temperature'])} °C")
-        cols[2].metric("Velocidade", value=f"{int(latest['speed'])} km/h", delta=f"{int(latest['speed'] - df.iloc[1]['speed'])} km/h")
-        
-        st.subheader("Histórico Recente")
-        
-        # Gráficos separados para resolver a distorção de escala
-        st.write("**Engine RPM**")
-        st.line_chart(df.set_index('timestamp')['rpm'], color="#FF4B4B")
-        
-        st.write("**Temperatura (°C)**")
-        st.line_chart(df.set_index('timestamp')['temperature'], color="#FFAA00")
-        
-        st.write("**Velocidade (km/h)**")
-        st.line_chart(df.set_index('timestamp')['speed'], color="#0068C9")
-        
-        with st.expander("Ver Dados Tabulares"):
-            st.dataframe(df.head(10))
-    else:
-        st.info("Nenhum dado recebido ainda. Ligue o mock_car.py ou verifique o FastAPI.")
+    st.title("Central de Análise Veicular Preditiva")
+    st.write("Telemetria veicular em tempo real via OBD-II (CAN 500 kbaud) e MQTTS 4G.")
 
-st.sidebar.header("Controles")
-auto_refresh = st.sidebar.checkbox("Auto-Refresh", value=True)
+    st.sidebar.header("Navegação")
+    selected_page = st.sidebar.radio(
+        "Selecione a visão",
+        [PAGE_LIVE, PAGE_HISTORY, PAGE_EDA, PAGE_AI],
+    )
 
-# Criamos um container vazio (placeholder) onde a UI será renderizada.
-# Isso evita o recarregamento total da página ("flicker" e lag de 4s).
-placeholder = st.empty()
+    if selected_page == PAGE_LIVE:
+        st.sidebar.header("Controles ao Vivo")
+        live_limit = st.sidebar.selectbox(
+            "Janela ao vivo (amostras)",
+            options=[100, 300, 600, 1200, 1800, 3000, 5000],
+            index=1,
+        )
+        auto_refresh = st.sidebar.checkbox("Auto-Refresh (Ao Vivo)", value=True)
+        st.sidebar.caption(
+            "Desmarque Auto-Refresh para pausar a tela e rolar/dar zoom nos gráficos sem resetar."
+        )
+        render_live_page(live_limit=live_limit, auto_refresh=auto_refresh)
+    elif selected_page == PAGE_HISTORY:
+        render_history_page()
+    elif selected_page == PAGE_EDA:
+        render_eda_page()
+    elif selected_page == PAGE_AI:
+        render_ai_diagnostics_page()
 
-if auto_refresh:
-    # Usamos um loop infinito para atualizar apenas o conteúdo do container
-    while True:
-        data = fetch_telemetry()
-        with placeholder.container():
-            render_dashboard(data)
-        time.sleep(0.5)  # Atualiza a cada 0.5s para bater com o gerador
-else:
-    data = fetch_telemetry()
-    with placeholder.container():
-        render_dashboard(data)
-    if st.button("Atualizar Manualmente"):
-        st.rerun()
+
+if __name__ == "__main__":
+    main()
