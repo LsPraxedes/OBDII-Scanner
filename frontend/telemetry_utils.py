@@ -13,6 +13,8 @@ from backend.config import API_URL  # noqa: E402
 CONNECTION_TIMEOUT_SECONDS = 5.0
 REFRESH_INTERVAL_SECONDS = 0.5
 KMH_TO_MS = 3.6
+MIN_ACCEL_DT_SECONDS = 0.25
+MAX_PHYSICAL_ACCEL_MS2 = 15.0
 DEFAULT_TZ_OFFSET_MINUTES = -180
 BRT_TZ = timezone(timedelta(minutes=DEFAULT_TZ_OFFSET_MINUTES))
 MAX_CHART_POINTS = 3000
@@ -101,10 +103,12 @@ def compute_acceleration(df: pd.DataFrame) -> pd.DataFrame:
     speed_ms = pd.to_numeric(result["speed"], errors="coerce") / KMH_TO_MS
     delta_speed_ms = speed_ms.diff()
 
-    # Evita divisão por zero ou valores infinitos em timestamps idênticos/inválidos
-    valid_mask = (delta_time_s > 0) & delta_speed_ms.notna()
+    # Evita divisão por rajadas 4G (dt muito pequeno) e picos não-físicos (ex: sentinela 0xFF)
+    valid_mask = (delta_time_s >= MIN_ACCEL_DT_SECONDS) & delta_speed_ms.notna()
     acceleration = nan_series.copy()
-    acceleration.loc[valid_mask] = delta_speed_ms.loc[valid_mask] / delta_time_s.loc[valid_mask]
+    raw_accel = delta_speed_ms.loc[valid_mask] / delta_time_s.loc[valid_mask]
+    physical_accel = raw_accel.where(raw_accel.abs() <= MAX_PHYSICAL_ACCEL_MS2)
+    acceleration.loc[valid_mask] = physical_accel
     result["acceleration_ms2"] = acceleration
     return result
 

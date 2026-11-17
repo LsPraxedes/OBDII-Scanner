@@ -112,6 +112,9 @@ def analyze_telemetry_records(
     Analisa uma lista de registros de telemetria para calcular frequência média
     de recepção (Hz) e detectar perda de pacotes ou saltos anômalos de timestamp.
     """
+    if expected_interval_s <= 0:
+        raise ValueError("expected_interval_s deve ser maior que zero.")
+
     threshold_s = (
         gap_threshold_s if gap_threshold_s is not None else max(2.5, expected_interval_s * 2.5)
     )
@@ -371,7 +374,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=2.0,
         help="Intervalo de atualização em segundos no modo --watch (padrão: 2.0).",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.expected_interval <= 0:
+        parser.error("--expected-interval deve ser maior que zero.")
+    if args.poll_interval <= 0:
+        parser.error("--poll-interval deve ser maior que zero.")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:

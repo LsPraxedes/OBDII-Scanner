@@ -1,0 +1,9 @@
+exclude = [
+    ".git",
+    ".gemini",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "hardware",
+]

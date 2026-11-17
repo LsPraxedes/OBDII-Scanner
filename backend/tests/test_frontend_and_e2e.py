@@ -71,22 +71,34 @@ def test_prepare_dataframe_sorts_chronologically_and_computes_acceleration():
 
 def test_compute_acceleration_handles_null_speed_and_zero_dt():
     """
-    Garante proteção contra velocidade nula (Optional[float]) e timestamps idênticos.
+    Garante proteção contra velocidade nula (Optional[float]), timestamps idênticos,
+    rajadas 4G (dt < 0.25 s) e picos não-físicos de velocidade (ex: sentinela 255 km/h).
     """
     df = pd.DataFrame(
         {
             "timestamp": pd.to_datetime(
                 [
-                    "2026-10-20T12:00:00Z",
-                    "2026-10-20T12:00:00Z",
-                    "2026-10-20T12:00:01Z",
+                    "2026-10-20T12:00:00.000Z",
+                    "2026-10-20T12:00:00.000Z",  # dt == 0
+                    "2026-10-20T12:00:01.000Z",  # speed nula
+                    "2026-10-20T12:00:02.000Z",  # base 0 km/h
+                    "2026-10-20T12:00:02.012Z",  # rajada 12ms -> NaN
+                    "2026-10-20T12:00:03.012Z",  # salto sentinela 255 km/h -> NaN (> 15 m/s²)
                 ]
             ),
-            "speed": [36.0, 36.0, None],
+            "speed": [36.0, 36.0, None, 0.0, 14.0, 255.0],
         }
     )
     result = compute_acceleration(df)
     assert result["acceleration_ms2"].isna().all()
+
+
+def test_verify_e2e_rejects_non_positive_expected_interval():
+    """
+    Garante falha explícita ao passar expected_interval_s <= 0 para análise E2E.
+    """
+    with pytest.raises(ValueError, match="expected_interval_s"):
+        analyze_telemetry_records([], expected_interval_s=0.0)
 
 
 def test_connection_status_online_and_offline_thresholds():

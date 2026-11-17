@@ -58,14 +58,24 @@ def render_history_page() -> None:
     cols = st.columns(5)
     cols[0].metric("Amostras no Trecho", f"{len(filtered_df)}")
     cols[1].metric("Duração da Janela", f"{duration_s / 60.0:.1f} min")
-    cols[2].metric("RPM Máximo", f"{int(round(filtered_df['rpm'].max()))} RPM")
+
+    max_rpm = filtered_df["rpm"].dropna().max()
+    cols[2].metric(
+        "RPM Máximo",
+        f"{int(round(max_rpm))} RPM" if pd.notna(max_rpm) else "--",
+    )
 
     max_speed = filtered_df["speed"].dropna().max()
     cols[3].metric(
         "Velocidade Máxima",
         f"{int(round(max_speed))} km/h" if pd.notna(max_speed) else "--",
     )
-    cols[4].metric("Temp. Máxima", f"{int(round(filtered_df['temperature'].max()))} °C")
+
+    max_temp = filtered_df["temperature"].dropna().max()
+    cols[4].metric(
+        "Temp. Máxima",
+        f"{int(round(max_temp))} °C" if pd.notna(max_temp) else "--",
+    )
 
     metrics_spec = [
         ("rpm", "Rotação (RPM)", "#FF4B4B"),

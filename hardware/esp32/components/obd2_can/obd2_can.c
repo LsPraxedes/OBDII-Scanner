@@ -104,11 +104,12 @@ static bool twai_ensure_bus_ready(uint32_t *wait_cycles) {
     if (!atomic_load(&s_recovery_started)) {
         ESP_LOGW(TAG, "Barramento CAN em Bus-Off (TEC=%u, REC=%u). Iniciando recuperacao automatica...",
                  status.tx_error_count, status.rx_error_count);
+        atomic_store(&s_recovery_started, true);
         esp_err_t ret = twai_node_recover(s_twai_node);
         if (ret == ESP_OK) {
-            atomic_store(&s_recovery_started, true);
             *wait_cycles = 0;
         } else {
+            atomic_store(&s_recovery_started, false);
             ESP_LOGE(TAG, "Falha ao iniciar recuperacao de Bus-Off (%s)", esp_err_to_name(ret));
         }
     } else {
@@ -193,19 +194,21 @@ static void twai_receive_task(void *arg) {
                 xTimerReset(s_led_timer, 0);
             }
 
-            // Decodificação de resposta padrão OBD-II (0x7E8 a 0x7EF)
-            if (item.id >= 0x7E8 && item.id <= 0x7EF && item.dlc >= 3 && item.data[1] == 0x41) {
+            // Decodificação de resposta padrão OBD-II Single Frame ISO 15765-4 (0x7E8 a 0x7EF)
+            bool is_single_frame = ((item.data[0] & 0xF0) == 0x00) && ((item.data[0] & 0x0F) >= 3);
+            if (item.id >= 0x7E8 && item.id <= 0x7EF && item.dlc >= 4 && is_single_frame && item.data[1] == 0x41) {
+                uint8_t pci_len = item.data[0] & 0x0F;
                 uint8_t pid = item.data[2];
 
-                if (pid == 0x0C && item.dlc >= 5) { // RPM: ((A * 256) + B) / 4
+                if (pid == 0x0C && item.dlc >= 5 && pci_len >= 4) { // RPM: ((A * 256) + B) / 4
                     float rpm = (float)((((uint16_t)item.data[3] << 8) | item.data[4]) / 4);
                     ESP_LOGI(TAG, "=====> [OBD2 RESPOSTA ECU] RPM DO MOTOR: %.1f RPM", rpm);
                     telemetry_set_rpm(rpm);
-                } else if (pid == 0x0D && item.dlc >= 4) { // Velocidade: A km/h
+                } else if (pid == 0x0D && item.dlc >= 4 && pci_len >= 3) { // Velocidade: A km/h
                     float speed = (float)item.data[3];
                     ESP_LOGI(TAG, "=====> [OBD2 RESPOSTA ECU] VELOCIDADE: %.1f km/h", speed);
                     telemetry_set_speed(speed);
-                } else if (pid == 0x05 && item.dlc >= 4) { // Temperatura: A - 40 °C
+                } else if (pid == 0x05 && item.dlc >= 4 && pci_len >= 3) { // Temperatura: A - 40 °C
                     float temp = (float)((int)item.data[3] - 40);
                     ESP_LOGI(TAG, "=====> [OBD2 RESPOSTA ECU] TEMP. MOTOR: %.1f °C", temp);
                     telemetry_set_temperature(temp);
