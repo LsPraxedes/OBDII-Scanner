@@ -22,6 +22,7 @@ Cada commit realizado no repositório foi decomposto e formalizado em um relató
 | **PR #07** | `c59b8e0` | `(alpha 2): MQTTS implementation on ESP32 with PIDs data` | Fase 2 — Semana 4 | [pr_07_fase2_semana4_firmware_cba_mqtts.md](relatorios_dev/pr_07_fase2_semana4_firmware_cba_mqtts.md) |
 | **PR #08** | `124d3fe` | `(alpha 2): e2e verify script, field guide and CAN bus-off auto-recovery` | Fase 2 — Semana 5 | [pr_08_fase2_semana5_integracao_e2e_veiculo_real.md](relatorios_dev/pr_08_fase2_semana5_integracao_e2e_veiculo_real.md) |
 | **PR #09** | `3636da2` | `(feat): add temporal telemetry API, modular sidebar frontend and phase 3/4 views` | Preparação Fases 3–4 | [pr_09_preparacao_fases3_4_frontend_historico_ia.md](relatorios_dev/pr_09_preparacao_fases3_4_frontend_historico_ia.md) |
+| **PR #10** | *pendente* | *a definir pelo autor* | Fase 3 — Semana 6 | [pr_10_fase3_semana6_crispdm_limpeza_eda.md](relatorios_dev/pr_10_fase3_semana6_crispdm_limpeza_eda.md) |
 
 ---
 
@@ -42,5 +43,7 @@ Além da relatoria histórica por commit, os módulos possuem relatórios de fun
 
 1. **Fase 1 (Semanas 1 e 2) — Concluída:** Esteira de dados completa (FastAPI + Pydantic + SQLite + MQTTS TLS 8883 + Streamlit + Mock).
 2. **Fase 2 (Semanas 3, 4 e 5) — Concluída:** Firmware modular em C no ESP-IDF com leitura CAN TWAI a 500 kbaud + auto-recuperação de *Bus-Off*, transmissão telemática MQTTS, cálculo de aceleração instantânea ($\Delta v / \Delta t$), auditoria E2E em veículo real e dashboard modularizado.
-3. **Fase 3 (Semanas 6 e 7) — Próxima Entrega:** Análise exploratória e limpeza de dados (EDA / CRISP-DM) com Pandas e modelagem preditiva com Scikit-Learn (*Isolation Forest*) para detecção de anomalias veiculares.
+3. **Fase 3 (Semanas 6 e 7) — Em andamento:**
+   * **Semana 6 — Concluída:** pipeline CRISP-DM de limpeza e atributos com Pandas (`backend/ml/`), *Data Quality Report*, tratamento de rajadas 4G, EDA (correlação, regimes e limiares normais), CLI `scripts/run_eda.py` e página EDA completa ([PR #10](relatorios_dev/pr_10_fase3_semana6_crispdm_limpeza_eda.md)).
+   * **Semana 7 — Próxima Entrega:** modelagem preditiva com Scikit-Learn (*Isolation Forest*) e salvamento do modelo em `.pkl`.
 4. **Fase 4 (Semana 8) — Finalização:** Implantação do modelo preditivo no backend e congelamento de código (*Code Freeze*).

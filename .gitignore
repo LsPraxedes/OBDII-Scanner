@@ -50,6 +50,7 @@
 modules.order
 Module.symvers
 Mkfile.old
+AGENTS.md
 dkms.conf
 
 # Segredos / ambiente
@@ -72,6 +73,11 @@ venv/
 
 *.db
 
+# Datasets limpos/exportados de viagens reais (scripts/run_eda.py --export-clean)
+# (sem "*.csv" global para não ignorar partitions.csv do ESP-IDF)
+data/
+telemetry_*.csv
+*.parquet
 
 # LaTeXDocs 
 docs/latex/normas/
