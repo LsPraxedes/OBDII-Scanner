@@ -16,3 +16,6 @@ API_URL = "http://localhost:8000/api/v1/telemetry"
 # Configurações de Banco de Dados
 DATABASE_URL = f"sqlite:///{BASE_DIR / 'vehicle_data.db'}"
 TEST_DATABASE_URL = f"sqlite:///{BASE_DIR / 'test.db'}"
+
+# Configurações de Inteligência Artificial (Fase 3 — Semana 7)
+ANOMALY_MODEL_PATH = BASE_DIR / "backend" / "ml" / "isolation_forest_model.pkl"

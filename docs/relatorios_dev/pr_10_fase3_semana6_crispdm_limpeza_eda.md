@@ -3,15 +3,15 @@
 **Projeto:** Central de Análise Veicular Preditiva (IoT)  
 **Curso:** Engenharia da Computação — Trabalho de Conclusão de Curso (TCC)  
 **Módulo:** Pipeline de Limpeza com Pandas, Engenharia de Atributos, Análise Exploratória e Página EDA  
-**Commit Associado:** *pendente* (alterações locais sobre `f850aa7`; versionamento a cargo do autor, conforme [AGENTS.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/AGENTS.md))  
+**Commit Associado:** `615d35d` (`(alpha 3): add CRISP-DM data preparation pipeline, EDA module and PR #10 report`)  
 **Data:** 18 de Novembro de 2026  
-**Autor:** Lucas Praxedes `<praxedes158@gmail.com>` (com atuação do Agente Executor — Semana 6, [executor6.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/agents/executor6.md))
+**Autor:** Lucas Praxedes `<praxedes158@gmail.com>`
 
 ---
 
 ## 1. Resumo Executivo e Objetivos
 
-Este marco executa a **Semana 6 da Fase 3 (IA Preditiva Clássica)** do [planejador.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/agents/planejador.md), cobrindo as etapas **Entendimento dos Dados** e **Preparação dos Dados** da metodologia CRISP-DM sobre os dados **reais** coletados no VW Polo Track (`vehicle_data.db`, 16/11/2026). Foi construído um pipeline **determinístico e reutilizável** em Pandas, consumido por três pontos: a CLI de auditoria (`scripts/run_eda.py`), a página `📊 Análise de Padrões (EDA)` do Streamlit e, na Semana 7, o treinamento do *Isolation Forest*.
+Este marco executa a **Semana 6 da Fase 3 (IA Preditiva Clássica)**, cobrindo as etapas **Entendimento dos Dados** e **Preparação dos Dados** da metodologia CRISP-DM sobre os dados **reais** coletados no VW Polo Track (`vehicle_data.db`, 16/11/2026). Foi construído um pipeline **determinístico e reutilizável** em Pandas, consumido por três pontos: a CLI de auditoria (`scripts/run_eda.py`), a página `📊 Análise de Padrões (EDA)` do Streamlit e, na Semana 7, o treinamento do *Isolation Forest*.
 
 Conforme a fronteira de escopo, **não** foi instalado `scikit-learn`, **não** houve treinamento e **nenhum** `.pkl` foi gerado.
 
@@ -39,6 +39,7 @@ Conforme a fronteira de escopo, **não** foi instalado `scikit-learn`, **não** 
 ```
 
 ### Objetivos Alcançados
+
 1. **Pipeline de limpeza e atributos** com filtros físicos do veículo e *Data Quality Report* contabilizando remoções por regra.
 2. **Tratamento explícito das rajadas 4G**, que preserva as leituras e anula só os atributos derivados do tempo.
 3. **EDA consolidada**: estatísticas globais e por regime, matriz de correlação e limiares normais preliminares.
@@ -66,6 +67,7 @@ Arquivos **não** alterados (fronteira de escopo): `docs/latex/TCC_II/`, `hardwa
 ## 3. Detalhamento Técnico
 
 ### 3.1. Regras de Limpeza (ordem de aplicação)
+
 | # | Regra (`removed_by_rule`) | Critério |
 | :-: | :--- | :--- |
 | 1 | `invalid_timestamp` | timestamp não conversível (`format="ISO8601"`, `utc=True`) |
@@ -77,12 +79,14 @@ Arquivos **não** alterados (fronteira de escopo): `docs/latex/TCC_II/`, `hardwa
 | 7 | `temperature_out_of_range` | fora de `[-20, 140]` °C |
 
 ### 3.2. Atributos e Regimes
+
 * `acceleration_ms2` $= \Delta v_{\text{m/s}} / \Delta t$, calculada **apenas** quando `derivative_valid` (`0,25 s ≤ dt ≤ 2,5 s`) e $|a| \le 15\ \text{m/s}^2$.
 * `rpm_delta` = ΔRPM entre amostras consecutivas com `derivative_valid`.
 * `rpm_per_speed` = RPM / velocidade, somente com `speed > 5 km/h`. Funciona como assinatura da marcha engatada.
 * **Regime:** `engine_off` (RPM < 300) · `driving` (speed > 2 km/h) · `idle` (motor ligado, speed ≤ 2 km/h) · `unknown` (motor ligado sem velocidade).
 
 ### 3.3. Robustez de Parsing do Timestamp
+
 Durante os testes foi identificado que `pd.to_datetime` **sem formato explícito** infere o padrão pelo primeiro elemento. Strings ISO com e sem microssegundos na mesma coluna (ex.: `18:00:20+00:00` e `18:00:20.010000+00:00`) faziam as demais virarem `NaT`, e elas eram descartadas silenciosamente. O pipeline usa `format="ISO8601"`.
 > **Achado para backlog (fora do escopo):** [`prepare_telemetry_dataframe`](file:///c:/Users/lucas/Documents/OBDII%20Scanner/frontend/telemetry_utils.py#L129) no frontend usa a conversão sem formato explícito e pode sofrer o mesmo efeito. O impacto prático é baixo, porque o SQLite grava microssegundos e só valores com microssegundo exatamente zero seriam afetados.
 
@@ -94,6 +98,7 @@ Durante os testes foi identificado que `pd.to_datetime` **sem formato explícito
 > **Capítulo sugerido:** *Metodologia → nova subseção "Preparação e qualidade dos dados (CRISP-DM)"* (ou dentro de *"Emulação veicular, visualização em tempo real e modelagem da camada de detecção"*), com base teórica em *Fundamentação Teórica → "Mineração de dados (CRISP-DM)…"*. A alternativa E (firmware) cabe em *Metodologia → Engenharia de firmware embarcado* e em *Trabalhos futuros*.
 
 ### 4.1. O que é uma "rajada 4G"
+
 O `timestamp` é gerado **no backend no momento da chegada** da mensagem MQTT ([database.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/backend/database.py), `default=datetime.now(timezone.utc)`), e não no instante da leitura CAN. O firmware publica apenas `{"rpm","temperature","speed"}` a cada 1 s ([mqtt_service.c](file:///c:/Users/lucas/Documents/OBDII%20Scanner/hardware/esp32/components/mqtt_service/mqtt_service.c#L61-L67)). Quando o 4G do *hotspot* oscila ou cai, a pilha TCP/MQTT retém os pacotes e os entrega em lote quando o enlace volta. Eles chegam com cerca de 10 ms de diferença e recebem horários quase idênticos. As leituras são válidas; o horário é que está deslocado.
 
 Exemplo real:
@@ -105,6 +110,7 @@ Exemplo real:
 | 18:35:46.938 | 975 | 3 | **0,013 s** ← rajada |
 
 ### 4.2. Evidências quantitativas (16/11/2026)
+
 | Item | Resultado |
 | :--- | :--- |
 | Registros / dias | 2074 / 1 |
@@ -117,6 +123,7 @@ Exemplo real:
 | Maiores janelas de falha | 12,2 s / 18,6 s / 22,8 s, cada uma seguida de 12 pacotes |
 
 ### 4.3. Hipótese testada: redistribuir uniformemente os pacotes na janela de falha
+
 Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (ex.: 10 pacotes em 15 s → 1,5 s cada) para estimar onde cada pacote deveria estar.
 
 | Grupo | Janela | Pacotes | s/pacote |
@@ -129,6 +136,7 @@ Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (e
 **Somente 2 de 71 grupos** resultaram em ≈ 1 s/pacote. Causas: (i) perda de pacotes durante a falha, que deixa lacunas impossíveis de localizar; (ii) rajadas encadeadas que se sobrepõem; (iii) a redistribuição cria horários com aparência de reais, mas que são estimativas, e isso contamina os atributos derivados (aceleração).
 
 ### 4.4. Alternativas comparadas
+
 | # | Alternativa | Vantagens | Limitações |
 | :-: | :--- | :--- | :--- |
 | A | Ignorar o timestamp (só atributos instantâneos) | Simples; não inventa dados | Perde aceleração e ΔRPM |
@@ -138,9 +146,10 @@ Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (e
 | E | Corrigir na origem: `ts` (epoch via SNTP) e contador `seq` no payload do ESP32 | Elimina o problema; mede latência e perda real | Reflash, campos opcionais no schema, nova coleta |
 
 ### 4.5. Decisão adotada e encaminhamento
+
 * **Semana 6 (implementado):** alternativa **B**, que é o padrão do pipeline. A coluna `timestamp_est` (alternativa **D**) é gerada com a flag `is_timestamp_estimated` e serve **apenas** à análise exploratória, **nunca** ao treinamento.
 * **A IA pode prosseguir antes da alteração do firmware.** O *Isolation Forest* da Semana 7 pode usar atributos instantâneos (`rpm`, `temperature`, `speed`, `rpm_per_speed`), independentes do timestamp. `acceleration_ms2`/`rpm_delta` entram só nas linhas com `derivative_valid`, ou como atributos opcionais. Como o pipeline é determinístico, uma nova coleta com timestamp de origem exige apenas trocar a fonte do tempo e retreinar, o que é uma nova iteração do ciclo CRISP-DM (*Entendimento dos Dados → nova coleta*).
-* **Alternativa E (sessão de hardware separada, fora do escopo do Executor 6):** a mudança é pequena. Envolve SNTP após o Wi-Fi, dois campos no `snprintf` e um contador estático. Pontos de atenção:
+* **Alternativa E (etapa de firmware separada, fora do escopo da Semana 6):** a mudança é pequena. Envolve SNTP após o Wi-Fi, dois campos no `snprintf` e um contador estático. Pontos de atenção:
   1. O payload agrega o **último valor** de cada PID (`telemetry_set_*`). Um `ts` único no instante da publicação já elimina o atraso de rede; a hora exata de cada leitura CAN exigiria um timestamp por PID.
   2. Sem SNTP sincronizado o `ts` é inválido, e o backend deve recorrer ao horário de chegada.
   3. Campos `ts`/`seq` **opcionais** no Pydantic mantêm compatibilidade com os 2074 registros atuais e com o firmware antigo.
@@ -151,6 +160,7 @@ Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (e
 ## 5. Resultados da EDA sobre os Dados Reais (`scripts/run_eda.py`)
 
 ### 5.1. Data Quality Report
+
 | Métrica | Valor |
 | :--- | :---: |
 | Registros brutos → limpos | 2074 → **2073** |
@@ -161,6 +171,7 @@ Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (e
 | Amostras com derivadas confiáveis | 1871 (90,3 %) |
 
 ### 5.2. Regimes Operacionais
+
 | Regime | Amostras | Participação |
 | :--- | :---: | :---: |
 | Em movimento (`driving`) | 1231 | 59,38 % |
@@ -168,7 +179,8 @@ Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (e
 | Motor desligado (`engine_off`) | 24 | 1,16 % |
 
 ### 5.3. Matriz de Correlação (Pearson)
-|  | RPM | Temperatura | Velocidade | Aceleração |
+
+| | RPM | Temperatura | Velocidade | Aceleração |
 | :--- | :---: | :---: | :---: | :---: |
 | **RPM** | 1,000 | −0,634 | **0,820** | 0,161 |
 | **Temperatura** | −0,634 | 1,000 | −0,716 | 0,048 |
@@ -178,6 +190,7 @@ Proposta do autor: dividir a janela da falha pelo número de pacotes do grupo (e
 Leitura: RPM e velocidade são fortemente correlacionados, como se espera numa transmissão mecânica. A correlação negativa da temperatura com velocidade/RPM é coerente com o maior fluxo de ar no radiador em movimento: a mediana é **88 °C em marcha lenta** contra **85 °C rodando**. Ainda assim, ela deve ser interpretada com cautela, porque há só um trajeto com o motor já aquecido (83–92 °C).
 
 ### 5.4. Limiares Normais Preliminares (faixa P05–P95; alerta P99)
+
 | Escopo | Variável | P05 | Mediana | P95 | P99 |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | Marcha lenta | RPM | 935 | 952 | 1131 | 1305 |
@@ -198,12 +211,13 @@ Leitura: RPM e velocidade são fortemente correlacionados, como se espera numa t
   * [test_data_preparation.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/backend/tests/test_data_preparation.py) (**11 novos**): outliers (`255 km/h`, `rpm < 0`, `rpm > 8000`, temperatura, velocidade, duplicatas), ordenação `[timestamp, id]`, rajadas `< 0,25 s` e quedas longas, `rpm_per_speed`, regimes, `timestamp_est` (normal e comprimido), SQLite ausente/existente/sem tabela, correlação 4×4 simétrica, percentis/limiares, DataFrame vazio, CLI `--export-clean` e renderização de `views/eda.py` no `AppTest`.
   * [test_frontend_and_e2e.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/backend/tests/test_frontend_and_e2e.py): 10 testes **sem alteração**, inclusive a renderização das 4 páginas.
   * [test_mqtt.py](file:///c:/Users/lucas/Documents/OBDII%20Scanner/backend/tests/test_mqtt.py): 3 testes.
-* **`venv\Scripts\pytest.exe backend/tests/test_main.py`**: travou na sandbox (comportamento documentado em [run-python-tests.md](file:///c:/Users/lucas/Documents/OBDII%20Scanner/.gemini/rules/run-python-tests.md)); executado fora dela com **4/4 aprovados**.
+* **`venv\Scripts\pytest.exe backend/tests/test_main.py`**: executado fora da sandbox no Windows (`TestClient`/`socketpair()`), com **4/4 aprovados**.
 * **Total: 28/28 testes aprovados.**
 * **`venv\Scripts\ruff.exe check .`**: código de saída `0`.
 * **Execução real:** `venv\Scripts\python.exe scripts\run_eda.py` sobre `vehicle_data.db`, com os resultados da Seção 5.
 
 ### Como reproduzir
+
 ```powershell
 venv\Scripts\python.exe scripts\run_eda.py                  # auditoria no terminal
 venv\Scripts\python.exe scripts\run_eda.py --export-clean   # + CSV em data/clean/ (gitignored)
@@ -212,6 +226,7 @@ venv\Scripts\python.exe scripts\run_eda.py --export-clean   # + CSV em data/clea
 ---
 
 ## 7. Próximos Passos (Semana 7)
+
 1. Instalar `scikit-learn` e treinar o *Isolation Forest* sobre `prepare_dataset(load_telemetry_from_sqlite())`, priorizando atributos independentes do timestamp e segmentando ou incluindo o regime.
 2. Usar os limiares da Seção 5.4 como referência de validação dos *scores*.
 3. (Opcional, trilha de hardware) Alternativa E: `ts` + `seq` no payload do ESP32 e nova coleta.

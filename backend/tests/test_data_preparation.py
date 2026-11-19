@@ -135,12 +135,13 @@ def test_rpm_per_speed_only_above_five_kmh():
 
 def test_classify_operating_regime():
     """
-    Classifica engine_off (RPM < 300), idle (speed ≤ 2), driving (speed > 2) e unknown.
+    Classifica engine_off (RPM < 300 parado), idle (speed ≤ 2), driving (speed > 2,
+    inclusive motor apagado em movimento para não suprimir alerta) e unknown.
     """
     df = pd.DataFrame(
         {
-            "rpm": [0.0, 950.0, 900.0, 2500.0, 1000.0],
-            "speed": [0.0, 0.0, 2.0, 40.0, np.nan],
+            "rpm": [0.0, 950.0, 900.0, 2500.0, 0.0, 1000.0],
+            "speed": [0.0, 0.0, 2.0, 40.0, 40.0, np.nan],
         }
     )
     result = classify_operating_regime(df)
@@ -148,6 +149,7 @@ def test_classify_operating_regime():
         REGIME_ENGINE_OFF,
         REGIME_IDLE,
         REGIME_IDLE,
+        REGIME_DRIVING,
         REGIME_DRIVING,
         REGIME_UNKNOWN,
     ]

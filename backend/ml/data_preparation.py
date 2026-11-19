@@ -247,13 +247,14 @@ def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
 def classify_operating_regime(df: pd.DataFrame) -> pd.DataFrame:
     """
     Classifica cada amostra no regime operacional:
-    - `engine_off`: RPM < 300 (motor desligado ou sem rotação);
-    - `driving`: velocidade > 2 km/h;
+    - `engine_off`: RPM < 300 com veículo estacionado (velocidade ausente ou ≤ 2 km/h);
+    - `driving`: velocidade > 2 km/h (inclusive caso o motor apague em movimento);
     - `idle`: motor ligado com velocidade ≤ 2 km/h (marcha lenta);
     - `unknown`: motor ligado sem leitura de velocidade.
     """
     result = df.copy()
-    engine_off = result["rpm"] < ENGINE_OFF_MAX_RPM
+    stopped_or_unknown_speed = result["speed"].isna() | (result["speed"] <= IDLE_MAX_SPEED_KMH)
+    engine_off = (result["rpm"] < ENGINE_OFF_MAX_RPM) & stopped_or_unknown_speed
     driving = ~engine_off & (result["speed"] > IDLE_MAX_SPEED_KMH)
     idle = ~engine_off & (result["speed"] <= IDLE_MAX_SPEED_KMH)
     result["regime"] = np.select(
