@@ -12,7 +12,7 @@
 
 O presente documento apresenta a fundamentação teórica, a modelagem arquitetural e as justificativas técnico-científicas da transição do firmware da unidade telemática veicular de uma estrutura monolítica em arquivo único (`main.c`) para uma **Arquitetura Baseada em Componentes (Component-Based Architecture — CBA)** gerenciada pelo sistema de meta-build **CMake** no ecossistema **ESP-IDF**.
 
-A solução implementada segrega as responsabilidades de baixo nível (barramento automotivo CAN/TWAI a 500 kbaud e transceptor físico), conectividade de rede (Wi-Fi Station com máquina de estados finita de reconexão), segurança telemática (cliente MQTTS sobre TLS v1.2 na porta 8883 com certificado raiz embutido e sinalização em GPIO 26) e gestão de dados thread-safe (telemetria concorrente com exclusão mútua), culminando em um orquestrador desacoplado no módulo `main`. 
+A solução implementada segrega as responsabilidades de baixo nível (barramento automotivo CAN/TWAI a 500 kbaud e transceptor físico), conectividade de rede (Wi-Fi Station com máquina de estados finita de reconexão), segurança telemática (cliente MQTTS sobre TLS v1.2 na porta 8883 com certificado raiz embutido e sinalização em GPIO 26) e gestão de dados thread-safe (telemetria concorrente com exclusão mútua), culminando em um orquestrador desacoplado no módulo `main`.
 
 ---
 
@@ -21,20 +21,26 @@ A solução implementada segrega as responsabilidades de baixo nível (barrament
 A estruturação adotada encontra respaldo em preceitos consolidados da Engenharia de Software e em normas para sistemas embarcados de missão crítica.
 
 ### 2.1. Arquitetura Baseada em Componentes (CBA) e Norma ISO/IEC/IEEE 42010
+
 A norma **ISO/IEC/IEEE 42010:2011** (*Systems and software engineering — Architecture description*) estabelece que uma arquitetura de software deve ser organizada em visões que expressem o particionamento do sistema em subsistemas modulares com interfaces bem delineadas.
 
 A abordagem **Component-Based Architecture (CBA)** preconiza que componentes de software sejam:
+
 * **Autocontidos:** Cada componente encapsula dados, lógica interna e drivers específicos.
 * **Componíveis:** As dependências são declaradas de forma explícita nas interfaces públicas (arquivos de cabeçalho `.h`).
 * **Substituíveis:** Alterações internas no hardware de rede ou no protocolo de transporte não produzem efeitos colaterais na camada de leitura veicular.
 
 ### 2.2. Princípios SOLID Aplicados a C Embarcado
+
 Embora desenvolvida em Linguagem C (paradigma estruturado), a arquitetura aplica conceitos fundamentais do design orientado a objetos:
+
 1. **Single Responsibility Principle (SRP):** Cada módulo possui uma única razão para mudar. O `wifi_manager` lida exclusivamente com o enlace 802.11; o `obd2_can` lida apenas com a norma ISO 15765-4 / barramento CAN; o `mqtt_service` cuida do protocolo de telemetria; o `telemetry` gerencia o estado da memória compartilhada.
 2. **Interface Segregation:** O orquestrador `main.c` enxerga apenas funções de inicialização de alto nível (`telemetry_init()`, `obd2_can_init()`, etc.), desconhecendo registradores internos, buffers estáticos ou ISRs do driver.
 
 ### 2.3. Diretrizes MISRA-C e Segurança Operacional
+
 Segundo as diretrizes **MISRA C:2012** (*Motor Industry Software Reliability Association*) e o guia **Barr Group Embedded C Coding Standard**, sistemas automotivos devem evitar variáveis globais expostas e acoplamento temporal. Na arquitetura implementada:
+
 * Não existem estruturas de dados globais públicas sem qualificador `static`.
 * O acesso à telemetria entre tasks concorrentes é mediado por um semáforo de exclusão mútua (**Mutex** do FreeRTOS), prevenindo condições de corrida (*race conditions*) e leituras inconsistentes de memória (*dirty reads*).
 
@@ -66,6 +72,7 @@ O ESP-IDF abandona sistemas legados de *Makefiles* manuais em prol do **CMake**,
 ```
 
 ### 3.1. Hierarquia de Arquivos `CMakeLists.txt`
+
 1. **CMakeLists.txt Raiz (`hardware/esp32/CMakeLists.txt`):**
    * Ponto de entrada do CMake para o projeto.
    * Invoca `$ENV{IDF_PATH}/tools/cmake/project.cmake`, que carrega os scripts internos do ESP-IDF.
@@ -84,7 +91,9 @@ O ESP-IDF abandona sistemas legados de *Makefiles* manuais em prol do **CMake**,
    * Registra `main.c` e declara as dependências de alto nível necessárias para compor a imagem de boot.
 
 ### 3.2. Ciclo de Compilação e Link-Edição
+
 O fluxo de geração do firmware opera em quatro fases determinísticas:
+
 1. **Varredura e Construção do Grafo de Dependências:** O CMake mapeia a árvore de inclusões e dependências entre componentes, garantindo que `telemetry` seja compilado antes de `mqtt_service` e `obd2_can`.
 2. **Compilação Isolada das Unidades de Tradução:** O compilador cruzado `xtensa-esp32-elf-gcc` compila cada arquivo `.c` gerando arquivos `.o`.
 3. **Criação de Bibliotecas Estáticas:** O utilitário `xtensa-esp32-elf-ar` agrupa os arquivos `.o` de cada componente em bibliotecas estáticas compactas (`libtelemetry.a`, `libobd2_can.a`, `libwifi_manager.a`, `libmqtt_service.a`).
@@ -107,12 +116,14 @@ O fluxo de geração do firmware opera em quatro fases determinísticas:
 ## 5. Detalhamento dos Módulos Implementados
 
 ### 5.1. Módulo `telemetry` (`components/telemetry/`)
+
 * **Papel:** Repositório de dados em tempo real da telemetria veicular.
 * **Estrutura:** Mantém uma struct com os PIDs obrigatórios (`rpm`, `temperature`) e opcionais (`speed`), além de marcas temporais e flags de validade.
 * **Sincronização:** Todas as escritas (`telemetry_set_*`) e leituras (`telemetry_get_snapshot`) são protegidas por um semáforo de exclusão mútua (`SemaphoreHandle_t s_mutex`).
 * **Conformidade de Schema:** O snapshot gerado fornece os dados estruturados de modo compatível com a validação Pydantic do backend (`backend/schemas/telemetry.py`).
 
 ### 5.2. Módulo `obd2_can` (`components/obd2_can/`)
+
 * **Papel:** Gestão da camada física e de enlace do barramento automotivo (CAN Bus).
 * **Parâmetros de Barramento:** Driver **TWAI** (*Two-Wire Automotive Interface*) configurado nativamente a **500 kbaud** (padrão de fábrica do Volkswagen Polo).
 * **Pinagem:** Pinos dedicados ao transceptor SN65HVD230: `TX_PIN = 4`, `RX_PIN = 5`.
@@ -123,22 +134,32 @@ O fluxo de geração do firmware opera em quatro fases determinísticas:
 * **Consulta Cíclica:** Task `twai_transmit_task` enviando requisições OBD-II padrão (Broadcast `0x7DF`, Modo `0x01`) para RPM (`0x0C`), Velocidade (`0x0D`) e Temperatura do Arrefecimento (`0x05`).
 
 ### 5.3. Módulo `wifi_manager` (`components/wifi_manager/`)
-* **Papel:** Camada de conectividade de rede local sem fio (Wi-Fi 802.11 b/g/n).
+
+* **Papel:** Camada de conectividade de rede local sem fio (Wi-Fi 802.11 b/g/n) e sincronização temporal UTC.
 * **Configuração:** Opera estritamente no modo Station (`WIFI_MODE_STA`).
 * **Resiliência e Tolerância a Falhas:**
   * Tratamento de eventos `WIFI_EVENT_STA_DISCONNECTED` com lógica de reconexão contínua em caso de perda de sinal ou afastamento do veículo.
   * Sincronização determinística via `EventGroupHandle_t` (`WIFI_CONNECTED_BIT`): o sistema só autoriza o início dos serviços de nuvem após a atribuição efetiva de endereço IP pelo servidor DHCP do roteador/hotspot móvel.
+* **Sincronização de Relógio via SNTP (`esp_netif_sntp`):**
+  * Após a obtenção de endereço IP, inicializa o cliente SNTP apontando para `pool.ntp.org` e aguarda a sincronização inicial com *timeout* não bloqueante (`WIFI_SNTP_SYNC_TIMEOUT_MS = 8000 ms`). Caso o servidor NTP demore a responder em redes móveis 4G, a inicialização prossegue sem travar o veículo e o ajuste do relógio ocorre em segundo plano.
+  * Expõe a função `wifi_manager_is_time_synced()`, que valida se o relógio UTC do sistema já convergiu para uma época válida (`tm_year >= 2025 - 1900`).
 
 ### 5.4. Módulo `mqtt_service` (`components/mqtt_service/`)
+
 * **Papel:** Transporte telemático seguro de dados para a nuvem.
 * **Protocolo e Criptografia:** MQTTS sobre TLS v1.2 na porta 8883 direcionado ao broker `test.mosquitto.org`.
 * **Autenticação:** O certificado raiz da autoridade certificadora (`mosquitto.org.crt`) foi encapsulado no componente via [ca_cert.h](file:///c:/Users/lucas/Documents/OBDII Scanner/hardware/esp32/components/mqtt_service/include/ca_cert.h) e diretiva `EMBED_TXTFILES`, garantindo validação da cadeia de confiança sem depender de armazenamento em cartão SD ou partição SPIFFS externa.
+* **Timestamp UTC de Origem no Payload JSON:**
+  * A task `mqtt_publisher_task` consulta `wifi_manager_is_time_synced()` a cada ciclo de publicação (`1000 ms`, buffer de `192 bytes`).
+  * Quando o relógio está sincronizado via SNTP, captura o tempo com resolução de microssegundos via `gettimeofday()` + `gmtime_r()` e formata o campo `"timestamp"` no padrão ISO 8601 UTC com milissegundos (`"YYYY-MM-DDTHH:MM:SS.mmmZ"`), eliminando distorções de derivada temporal causadas por rajadas ou atrasos de entrega da rede celular 4G.
+  * Quando o relógio ainda não está sincronizado, omite o campo `"timestamp"`, preservando retrocompatibilidade total com o fallback de horário de recepção do servidor backend.
 * **Sinalização Visual no Hardware (Pino D26 / GPIO 26):**
   * O pino **GPIO 26** é inicializado como saída digital em nível baixo.
   * A cada publicação bem-sucedida executada pela task `mqtt_publisher_task`, o pino D26 é levado a nível alto (`1`) e desarmado assincronamente por um temporizador FreeRTOS de **50 ms** (`mqtt_led_timer`).
   * Isso fornece confirmação visual em tempo real durante testes de rodagem no veículo.
 
 ### 5.5. Orquestrador `main` (`main/main.c`)
+
 * **Papel:** Coordenação e inicialização do ciclo de vida do sistema.
 * **Implementação:** Contém exclusivamente a função `app_main()`, reduzida a 35 linhas de código limpo com macros de checagem de integridade (`ESP_ERROR_CHECK`), garantindo que qualquer falha de alocação de hardware aborte o boot de forma explícita e controlada.
 
@@ -159,6 +180,7 @@ O fluxo de geração do firmware opera em quatro fases determinísticas:
 ## 7. Justificativas Acadêmicas e Profissionais para a Banca de TCC
 
 ### 7.1. Relevância Acadêmica (Engenharia da Computação)
+
 1. **Atendimento a Critérios de Engenharia:** Transcende o mero funcionamento empírico (*hobbyist approach*) e adota princípios de Engenharia de Sistemas Embarcados com tolerância a falhas, concorrência segura e gestão de memória determinística.
 2. **Defesa Teórica Sólida:** Permite ao estudante argumentar perante a banca sobre tópicos essenciais da computação:
    * Sistemas de Tempo Real (RTOS): escalonamento de tarefas, filas inter-threads e timers assíncronos.
@@ -166,6 +188,7 @@ O fluxo de geração do firmware opera em quatro fases determinísticas:
    * Segurança da Informação: canais seguros TLS aplicados a dispositivos com recursos restritos (IoT Security).
 
 ### 7.2. Relevância Profissional e para o Mercado de Trabalho
+
 1. **Padrão da Indústria:** Grandes empresas desenvolvedoras de firmware (indústria automotiva, médica e aeroespacial) exigem arquiteturas modulares orientadas a CMake e aderência a padrões semelhantes ao AUTOSAR e MISRA-C.
 2. **Facilidade de Teste e Integração Contínua (CI/CD):** Componentes isolados com interfaces puras permitem o desenvolvimento de testes unitários automatizados (via Unity/CMock) simulando entradas de barramento sem necessidade do veículo físico conectado.
 
